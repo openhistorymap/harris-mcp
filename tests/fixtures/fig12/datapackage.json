@@ -1,0 +1,284 @@
+{
+    "name": "harris-matrix-fig12",
+    "schema": "tabular-data-package",
+    "profile": "tabular-data-package",
+    "resources": [
+        {
+            "path": "contexts.csv",
+            "profile": "tabular-data-resource",
+            "name": "contexts",
+            "format": "csv",
+            "mediatype": "text/csv",
+            "encoding": "utf-8",
+            "schema": {
+                "fields": [
+                    {
+                        "name": "label",
+                        "type": "string",
+                        "format": "default"
+                    },
+                    {
+                        "name": "unit-type",
+                        "type": "string",
+                        "format": "default"
+                    },
+                    {
+                        "name": "position",
+                        "type": "string",
+                        "format": "default"
+                    },
+                    {
+                        "name": "period",
+                        "type": "integer",
+                        "format": "default"
+                    },
+                    {
+                        "name": "phase",
+                        "type": "integer",
+                        "format": "default"
+                    },
+                    {
+                        "name": "url",
+                        "type": "string",
+                        "format": "default"
+                    }
+                ],
+		        "foreignKeys": [
+		            {
+			        "fields": "period",
+			        "reference": {"resource": "periods", "fields": "id"}
+		            },
+		            {
+			        "fields": "phase",
+			        "reference": {"resource": "phases", "fields": "id"}
+		            }
+		        ],
+		        "primaryKey": "label",
+                "missingValues": [
+                    ""
+                ]
+            }
+        },
+        {
+            "path": "date-order.csv",
+            "profile": "tabular-data-resource",
+            "name": "date-order",
+            "format": "csv",
+            "mediatype": "text/csv",
+            "encoding": "utf-8",
+            "schema": {
+                "fields": [
+                    {
+                        "name": "older",
+                        "type": "string",
+                        "format": "default"
+                    },
+                    {
+                        "name": "younger",
+                        "type": "string",
+                        "format": "default"
+                    }
+                ],
+                "foreignKeys": [
+                    {
+	                    "fields": "older",
+	                    "reference": {"resource": "contexts", "fields": "label"}
+                    },
+                    {
+	                    "fields": "younger",
+	                    "reference": {"resource": "contexts", "fields": "label"}
+                    }
+                ],
+                "missingValues": [
+                    ""
+                ]
+            }
+        },
+        {
+            "path": "inferences.csv",
+            "profile": "tabular-data-resource",
+            "name": "inferences",
+            "format": "csv",
+            "mediatype": "text/csv",
+            "encoding": "utf-8",
+            "schema": {
+                "fields": [
+                    {
+                        "name": "first",
+                        "type": "string",
+                        "format": "default"
+                    },
+                    {
+                        "name": "second",
+                        "type": "string",
+                        "format": "default"
+                    }
+                ],
+                "foreignKeys": [
+                    {
+	                    "fields": "first",
+	                    "reference": {"resource": "contexts", "fields": "label"}
+                    },
+                    {
+	                    "fields": "second",
+	                    "reference": {"resource": "contexts", "fields": "label"}
+                    }
+                ],
+                "missingValues": [
+                    ""
+                ]
+            }
+        },
+        {
+            "path": "observations.csv",
+            "profile": "tabular-data-resource",
+            "name": "observations",
+            "format": "csv",
+            "mediatype": "text/csv",
+            "encoding": "utf-8",
+            "schema": {
+                "fields": [
+                    {
+                        "name": "younger",
+                        "type": "string",
+                        "format": "default"
+                    },
+                    {
+                        "name": "older",
+                        "type": "string",
+                        "format": "default"
+                    },
+                    {
+                        "name": "url",
+                        "type": "string",
+                        "format": "default"
+                    }
+                ],
+		"foreignKeys": [
+		    {
+			"fields": "younger",
+			"reference": {"resource": "contexts", "fields": "label"}
+		    },
+		    {
+			"fields": "older",
+			"reference": {"resource": "contexts", "fields": "label"}
+		    }
+		],
+                "missingValues": [
+                    ""
+                ]
+            }
+        },
+        {
+            "path": "periods.csv",
+            "profile": "tabular-data-resource",
+            "name": "periods",
+            "format": "csv",
+            "mediatype": "text/csv",
+            "encoding": "utf-8",
+            "schema": {
+                "fields": [
+                    {
+                        "name": "id",
+                        "type": "integer",
+                        "format": "default"
+                    },
+                    {
+                        "name": "label",
+                        "type": "string",
+                        "format": "default"
+                    },
+                    {
+                        "name": "attribute",
+                        "type": "integer",
+                        "format": "default"
+                    },
+                    {
+                        "name": "url",
+                        "type": "string",
+                        "format": "default"
+                    }
+                ],
+                "missingValues": [
+                    ""
+                ]
+            }
+        },
+        {
+            "path": "phases.csv",
+            "profile": "tabular-data-resource",
+            "name": "phases",
+            "format": "csv",
+            "mediatype": "text/csv",
+            "encoding": "utf-8",
+            "schema": {
+                "fields": [
+                    {
+                        "name": "id",
+                        "type": "integer",
+                        "format": "default"
+                    },
+                    {
+                        "name": "label",
+                        "type": "string",
+                        "format": "default"
+                    },
+                    {
+                        "name": "attribute",
+                        "type": "integer",
+                        "format": "default"
+                    },
+                    {
+                        "name": "url",
+                        "type": "string",
+                        "format": "default"
+                    }
+                ],
+                "missingValues": [
+                    ""
+                ]
+            }
+        },
+        {
+            "path": "radiocarbon.csv",
+            "profile": "tabular-data-resource",
+            "name": "radiocarbon",
+            "format": "csv",
+            "mediatype": "text/csv",
+            "encoding": "utf-8",
+            "schema": {
+                "fields": [
+                    {
+                        "name": "theta",
+                        "type": "integer",
+                        "format": "default"
+                    },
+                    {
+                        "name": "context",
+                        "type": "string",
+                        "format": "default"
+                    },
+                    {
+                        "name": "lab",
+                        "type": "string",
+                        "format": "default"
+                    },
+                    {
+                        "name": "association",
+                        "type": "string",
+                        "format": "default"
+                    }
+                ],
+		        "foreignKeys": [
+		            {
+			        "fields": "context",
+			        "reference": {"resource": "contexts", "fields": "label"}
+		            }
+		        ],
+                "missingValues": [
+                    ""
+                ]
+            }
+        }
+    ]
+}

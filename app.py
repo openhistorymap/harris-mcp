@@ -20,11 +20,14 @@ async def health(request):
     })
 
 
+mcp_app = mcp.http_app(transport="sse", path="/sse")
+
 app = Starlette(
     routes=[
         Route("/", health),
-        Mount("/mcp", mcp.get_sse_app()),
+        Mount("/mcp", mcp_app),  # SSE stream at /mcp/sse
     ],
+    lifespan=mcp_app.lifespan,
 )
 
 # Run via:

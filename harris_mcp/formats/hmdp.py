@@ -25,6 +25,10 @@ PROFILE = "harris-matrix-data-package-v1"
 def load(path: str | Path) -> Matrix:
     p = Path(path)
     data = json.loads(p.read_text(encoding="utf-8"))
+    if not isinstance(data, dict) or not ({"contexts", "relations"} & data.keys()):
+        raise ValueError(
+            f"{p} is not an HMDP file (no 'contexts' or 'relations' key)"
+        )
     name = data.get("name") or p.stem
     m = Matrix(id=new_id(hint=p.stem), name=name, path=str(p))
     for raw in data.get("contexts", []):

@@ -4,10 +4,14 @@ Two conventions are supported on read:
 
 1. **Paired tables.** A directory containing `contexts.csv` and
    `relations.csv`, or two explicit paths joined by `+`
-   (e.g. ``"site/contexts.csv+site/relations.csv"``).
+   (e.g. ``"site/contexts.csv+site/relations.csv"``). Context ids come
+   from an ``id`` or ``label`` column; relations from ``a``/``b``,
+   ``from``/``to``, ``above``/``below`` or ``younger``/``older``.
 2. **Edge list.** A single CSV whose first row is a header containing the
    columns ``above`` and ``below`` (any order). Contexts are inferred from
    the union of cells.
+3. **Harris Matrix Composer export.** A single semicolon-separated CSV
+   starting with ``HEADER;`` (see `hmc_units`).
 
 Write always produces paired tables; the path argument is treated as a
 directory and the two files are written inside it.
@@ -21,6 +25,7 @@ from typing import Iterable
 
 from ..model import Context, Matrix, Relation
 from ..registry import new_id
+from . import hmc_units
 
 
 def _read_rows(p: Path) -> list[dict[str, str]]:
@@ -30,21 +35,38 @@ def _read_rows(p: Path) -> list[dict[str, str]]:
 
 def _load_paired(contexts_path: Path, relations_path: Path, name: str) -> Matrix:
     m = Matrix(id=new_id(hint=name), name=name, path=str(contexts_path.parent))
-    for row in _read_rows(contexts_path):
-        ctx_id = row.pop("id", None) or row.pop("ID", None)
+    ctx_rows = _read_rows(contexts_path)
+    for row in ctx_rows:
+        ctx_id = row.pop("id", None) or row.pop("ID", None) or row.pop("label", None)
         if not ctx_id:
             continue
+        if "unit-type" in row and "type" not in row:
+            row["type"] = row.pop("unit-type")
         known = {"type", "period", "phase", "group", "description"}
         kwargs = {k: v for k, v in row.items() if k in known and v != ""}
         extras = {k: v for k, v in row.items() if k not in known and v != ""}
         m.add_context(Context(id=ctx_id, attrs=extras, **kwargs))
-    for row in _read_rows(relations_path):
-        a = row.get("a") or row.get("from") or row.get("source")
-        b = row.get("b") or row.get("to") or row.get("target")
+    if ctx_rows and not m.contexts:
+        raise ValueError(
+            f"{contexts_path}: no context ids found; expected an 'id' or 'label' "
+            f"column, got {sorted(ctx_rows[0])}"
+        )
+    rel_rows = _read_rows(relations_path)
+    for row in rel_rows:
+        if row.get("younger") and row.get("older"):
+            m.add_relation(Relation(a=row["younger"], b=row["older"], kind="above"))
+            continue
+        a = row.get("a") or row.get("from") or row.get("source") or row.get("above")
+        b = row.get("b") or row.get("to") or row.get("target") or row.get("below")
         kind = row.get("kind") or row.get("relation") or "above"
         if not (a and b):
             continue
         m.add_relation(Relation(a=a, b=b, kind=kind))
+    if rel_rows and not m.relations:
+        raise ValueError(
+            f"{relations_path}: no relations found; expected a/b, from/to, "
+            f"above/below or younger/older columns, got {sorted(rel_rows[0])}"
+        )
     m.rebuild_indexes()
     return m
 
@@ -76,9 +98,14 @@ def load(path: str | Path) -> Matrix:
             )
         return _load_paired(contexts, relations, p.name)
     # Single CSV — sniff the header
-    with p.open(newline="", encoding="utf-8") as f:
-        reader = _csv.reader(f)
-        header = next(reader, [])
+    raw = p.read_bytes()
+    try:
+        text = raw.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        text = raw.decode("cp1252", errors="replace")
+    if text.startswith("HEADER;"):
+        return hmc_units.from_csv_export(text, p)
+    header = next(_csv.reader(text.splitlines()), [])
     headers = {h.strip().lower() for h in header}
     if {"above", "below"} <= headers:
         return _load_edge_list(p)

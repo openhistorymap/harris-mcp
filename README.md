@@ -37,10 +37,11 @@ rationale at length.
 
 ## Features
 
-- **Five file formats.** HMDP (an open JSON pivot format defined here),
-  CSV (paired tables or single edge-list), XLSX. HMC and HMCX are
-  best-effort read-only with a clear `NotImplementedError` fallback when
-  the proprietary variant is unrecognised.
+- **Many file formats.** HMDP (an open JSON pivot format defined here),
+  CSV (paired tables or single edge-list), XLSX, and T. S. Dye's
+  Frictionless [harris-matrix-data-package][hmdp-dye] and hm projects, and
+  Harris Matrix Composer's HMCX / GraphML and CSV export (all read-only).
+  Unrecognised HMC variants fail with a clear `NotImplementedError`.
 - **High-density reads tuned for LLM consumption.** `describe_context`
   returns a unit plus its 2-hop neighborhood plus phase membership plus
   any cross-document correspondences in one call — so the model doesn't
@@ -60,6 +61,7 @@ rationale at length.
   attribution and patent-grant rules per the licence.
 
 [ohm]: https://www.openhistorymap.org/
+[hmdp-dye]: https://github.com/tsdye/harris-matrix-data-package
 
 ## Quick start
 
@@ -95,7 +97,7 @@ built with FastMCP) can connect to the SSE endpoint above. See
 | Load / save | `open_matrix`, `open_corpus`, `close_matrix`, `list_open_matrices`, `save_matrix` |
 | Read units | `get_context`, `list_contexts`, `count_contexts`, `search_contexts` |
 | Read relations | `neighbors`, `ancestors`, `descendants`, `relation`, `path`, `between`, `contemporaries` |
-| Whole-matrix | `topological_layers`, `phases`, `periods`, `phase_contexts`, `validate`, `summary`, `anomalies`, `describe_context`, `describe_phase`, `boundary_contexts` |
+| Whole-matrix | `topological_layers`, `phases`, `phase_sequence`, `periods`, `phase_contexts`, `validate`, `summary`, `anomalies`, `describe_context`, `describe_phase`, `boundary_contexts` |
 | Edit (changelogged) | `add_context`, `update_context`, `delete_context`, `add_relation`, `remove_relation`, `assign_phase`, `mark_contemporary`, `attach_note` |
 | Provenance | `history`, `revert`, `diff` |
 | Cross-document | `query_corpus`, `cross_reference`, `assert_correspondence`, `correspondences`, `compare_phases`, `compare_periods` |
@@ -119,9 +121,11 @@ harris://corpus/correspondences
 |---|:---:|:---:|---|
 | **HMDP** (`.hmdp.json` / `.json`) | ✅ | ✅ | Canonical open pivot; lossless |
 | **CSV** (`contexts.csv` + `relations.csv`, or edge-list) | ✅ | ✅ | Two conventions accepted on read |
+| **Frictionless data package / hm project** (`datapackage.json` or hm `.ini`, their folder, or a `.zip`) | ✅ | ❌ | Dye's `hm` tables: `observations`, `inferences`, `date-order`, `periods`, `phases`, `radiocarbon` |
+| **HMC CSV export** (`HEADER;…` semicolon file) | ✅ | ❌ | Units, `ABOVE`/`BELOW`/`CONTEMPORARY`, phase/period groups |
 | **XLSX** | ✅ | ✅ | Sheets `contexts`, `relations` |
-| **HMC** | ⚠️ best-effort | ❌ | Proprietary; export to CSV/XLSX from HMC |
-| **HMCX** | ⚠️ best-effort | ❌ | Zipped XML; same caveat as HMC |
+| **HMC** | ✅ GraphML / ⚠️ other | ❌ | GraphML payloads read fully; other XML best-effort |
+| **HMCX** | ✅ | ❌ | Zipped GraphML (`matrix.xml`), as written by HMC 2.x |
 
 Help adding fuller HMC/HMCX support is very welcome — see
 [Contributing](#contributing).
@@ -156,9 +160,7 @@ Apache License 2.0 (see [LICENSE](LICENSE)).
 
 - Better HMC/HMCX parsers (you have sample files? open an issue with one).
 - Additional format adapters (GraphML, ArchEd, Stratify).
-- A real test suite (`pytest`, fixtures under `tests/fixtures/`).
-- Phase-order metadata (today phase ordering is lexical; let users supply
-  an explicit phase sequence).
+- More test fixtures under `tests/fixtures/` (real site matrices welcome).
 - Better Graphviz styling (per-type node shapes, equivalence-class boxes).
 
 **Workflow**
@@ -166,24 +168,18 @@ Apache License 2.0 (see [LICENSE](LICENSE)).
 1. Open an issue first for anything non-trivial — we'd rather discuss the
    shape of a change than rebase it.
 2. Fork → feature branch → PR against `main`. Keep PRs focused.
-3. Run the smoke test (see below) before opening the PR.
+3. Run the test suite (see below) before opening the PR.
 4. Commit messages: imperative mood, short subject, longer body if the
    *why* is non-obvious.
 
-**Smoke test**
+**Tests**
 
 ```bash
-docker build -t harris-mcp:dev .
-docker run --rm harris-mcp:dev python -c "
-from harris_mcp.model import Context, Relation, Matrix
-from harris_mcp.validate import validate
-m = Matrix(id='t', name='t')
-m.add_context(Context(id='1')); m.add_context(Context(id='2'))
-m.add_relation(Relation(a='1', b='2', kind='above'))
-assert validate(m)['valid']
-print('ok')
-"
+docker build --target test -t harris-mcp:test .
+docker run --rm harris-mcp:test
 ```
+
+or locally: `pip install -r requirements.txt -r requirements-dev.txt && pytest`.
 
 **Reporting bugs**
 
@@ -202,12 +198,14 @@ personal attacks are not.
 
 ## Roadmap
 
-- [ ] Reverse-engineered (or partner-supplied) HMC/HMCX read/write
-- [ ] Explicit phase-ordering metadata
+- [x] HMC/HMCX read (GraphML payload and CSV export)
+- [ ] HMC/HMCX write
+- [x] Explicit phase ordering (`anomalies(phase_order=...)`, `phase_sequence`)
 - [ ] Spatial coreference: suggest correspondences from context geometries
 - [ ] Persistent storage backend (Mongo, matching the rest of OHM)
 - [ ] Bibliographic linkage to [`ohmi`][ohmi] (Zotero-backed)
-- [ ] Real test suite + CI
+- [x] Test suite (`tests/`)
+- [ ] CI
 - [ ] Worked example archive under `examples/`
 
 [ohmi]: https://github.com/openhistorymap

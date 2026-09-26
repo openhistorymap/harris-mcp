@@ -1,0 +1,30 @@
+# Swarm stack for harris.openhistorymap.org, routed by the shared Traefik.
+#   docker build -t harris-mcp:latest .
+#   docker stack deploy -c docker-stack.yml harris
+# The image is built locally, so the service is pinned to the node that has it.
+version: "3.8"
+
+services:
+  mcp:
+    image: harris-mcp:latest
+    volumes:
+      - /srv/volumes/harris-mcp/data:/data:ro
+    networks:
+      - traefik-ohm
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == runner
+      labels:
+        traefik.enable: "true"
+        traefik.docker.network: traefik-ohm
+        traefik.http.routers.harris-mcp.entrypoints: websecure
+        traefik.http.routers.harris-mcp.rule: Host(`harris.openhistorymap.org`)
+        traefik.http.routers.harris-mcp.service: harris-mcp-svc
+        traefik.http.routers.harris-mcp.tls.certresolver: secure
+        traefik.http.services.harris-mcp-svc.loadbalancer.server.port: "8000"
+
+networks:
+  traefik-ohm:
+    external: true

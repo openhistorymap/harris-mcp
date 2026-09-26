@@ -1,4 +1,4 @@
-fastmcp>=0.4.0
+fastmcp>=3,<4
 starlette>=0.36
 uvicorn[standard]>=0.27
 networkx>=3.0

@@ -1,7 +1,8 @@
 """HMC adapter — Harris Matrix Composer native format.
 
 HMC files are produced by the proprietary Harris Matrix Composer application.
-The format is not openly specified. This adapter ships a best-effort XML
+The format is not openly specified. GraphML payloads (what HMC 2.x
+writes) are read by `hmc_units`; anything else goes through a best-effort XML
 sniffer that extracts contexts and `above` edges from the structures we have
 observed in the wild; it is intentionally conservative and will raise a clear
 `NotImplementedError` rather than silently mis-parse an unknown variant.
@@ -17,6 +18,7 @@ from pathlib import Path
 
 from ..model import Context, Matrix, Relation
 from ..registry import new_id
+from . import hmc_units
 
 
 def _best_effort_xml(text: str, p: Path) -> Matrix:
@@ -29,6 +31,9 @@ def _best_effort_xml(text: str, p: Path) -> Matrix:
             f"{p} does not look like XML-based HMC; export to CSV/XLSX from "
             "Harris Matrix Composer and load that instead."
         ) from exc
+
+    if hmc_units.is_graphml(root):
+        return hmc_units.from_graphml(root, p)
 
     m = Matrix(id=new_id(hint=p.stem), name=p.stem, path=str(p))
 

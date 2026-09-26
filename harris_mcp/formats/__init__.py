@@ -10,6 +10,7 @@ from pathlib import Path
 
 from ..model import Matrix
 from . import csv as csv_fmt
+from . import datapackage as datapackage_fmt
 from . import hmc as hmc_fmt
 from . import hmcx as hmcx_fmt
 from . import hmdp as hmdp_fmt
@@ -19,6 +20,8 @@ _LOADERS = {
     "hmdp": hmdp_fmt.load,
     "json": hmdp_fmt.load,
     "csv": csv_fmt.load,
+    "datapackage": datapackage_fmt.load,
+    "zip": datapackage_fmt.load,
     "xlsx": xlsx_fmt.load,
     "hmc": hmc_fmt.load,
     "hmcx": hmcx_fmt.load,
@@ -28,6 +31,8 @@ _DUMPERS = {
     "hmdp": hmdp_fmt.dump,
     "json": hmdp_fmt.dump,
     "csv": csv_fmt.dump,
+    "datapackage": datapackage_fmt.dump,
+    "zip": datapackage_fmt.dump,
     "xlsx": xlsx_fmt.dump,
     "hmc": hmc_fmt.dump,
     "hmcx": hmcx_fmt.dump,
@@ -40,10 +45,16 @@ def detect(path: str | Path) -> str:
     p = Path(path)
     suffix = p.suffix.lower().lstrip(".")
     if suffix == "json":
-        # Could be HMDP or arbitrary JSON; HMDP is the loader we have.
+        # HMDP, unless it is a Frictionless descriptor (datapackage.json).
+        if p.exists() and datapackage_fmt.is_descriptor(p):
+            return "datapackage"
         return "hmdp"
+    if suffix in ("zip", "ini"):
+        return "datapackage"
     if suffix in _LOADERS:
         return suffix
+    if p.is_dir() and datapackage_fmt.is_hm_dir(p):
+        return "datapackage"
     # Directory containing contexts.csv + relations.csv is treated as csv.
     if p.is_dir() and (p / "contexts.csv").exists():
         return "csv"

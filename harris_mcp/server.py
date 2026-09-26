@@ -266,7 +266,9 @@ def topological_layers(matrix_id: str) -> list[list[str]]:
     earliest first."""
     m = registry.get(matrix_id)
     try:
-        return [sorted(layer) for layer in nx.topological_generations(m.graph)]
+        # Edges point from the later unit down to the earlier one, so
+        # topological generations come out latest first.
+        return [sorted(layer) for layer in reversed(list(nx.topological_generations(m.graph)))]
     except nx.NetworkXUnfeasible:
         return []
 
@@ -306,24 +308,59 @@ def summary(matrix_id: str) -> dict:
     return _matrix_summary(registry.get(matrix_id))
 
 
-@mcp.tool
-def anomalies(matrix_id: str) -> list[dict]:
-    """Phase assignments that violate the stratigraphic partial order.
-
-    Returns pairs (a, b) where `a` is stratigraphically above `b` but `a`'s
-    phase orders *earlier* than `b`'s phase (by lexical sort of phase names —
-    callers can substitute a real phase order via assigned attributes).
-    """
-    m = registry.get(matrix_id)
-    out = []
-    phase_order = sorted(m.phases.keys())
-    rank = {p: i for i, p in enumerate(phase_order)}
+def _phase_graph(m: Matrix) -> nx.DiGraph:
+    """Phase-level graph: an edge p -> q when some unit of p lies above a unit of q."""
+    pg = nx.DiGraph()
+    pg.add_nodes_from(m.phases)
     for a, b in m.graph.edges:
         pa = (m.contexts.get(a) or Context(id=a)).phase
         pb = (m.contexts.get(b) or Context(id=b)).phase
-        if pa and pb and rank.get(pa, -1) < rank.get(pb, -1):
-            out.append({"a": a, "b": b, "phase_a": pa, "phase_b": pb,
-                        "issue": "a is above b but a's phase ranks earlier"})
+        if pa and pb and pa != pb:
+            pg.add_edge(pa, pb)
+    return pg
+
+
+@mcp.tool
+def phase_sequence(matrix_id: str) -> dict:
+    """Phase order implied by the stratigraphy, earliest first.
+
+    `conflicts` lists groups of phases that each lie above one another and
+    so cannot be ordered; they appear together as one step of `sequence`.
+    """
+    m = registry.get(matrix_id)
+    cond = nx.condensation(_phase_graph(m))
+    sequence = [sorted(cond.nodes[n]["members"]) for n in reversed(list(nx.topological_sort(cond)))]
+    return {"sequence": sequence, "conflicts": [step for step in sequence if len(step) > 1]}
+
+
+@mcp.tool
+def anomalies(matrix_id: str, phase_order: Optional[list[str]] = None) -> list[dict]:
+    """Phase assignments that violate the stratigraphic partial order.
+
+    With `phase_order` (phase names, earliest first) returns pairs (a, b)
+    where `a` is stratigraphically above `b` but `a`'s phase is earlier.
+    Without it the order is inferred from the matrix itself (see
+    `phase_sequence`), and pairs are returned where the two phases each lie
+    above the other, so no consistent order exists.
+    """
+    m = registry.get(matrix_id)
+    out = []
+    if phase_order:
+        rank = {p: i for i, p in enumerate(phase_order)}
+        in_conflict = lambda pa, pb: pa in rank and pb in rank and rank[pa] < rank[pb]
+        issue = "a is above b but a's phase is earlier in phase_order"
+    else:
+        component = {}
+        for i, members in enumerate(nx.strongly_connected_components(_phase_graph(m))):
+            for p in members:
+                component[p] = i
+        in_conflict = lambda pa, pb: component[pa] == component[pb]
+        issue = "a is above b but the phases are also ordered the other way elsewhere"
+    for a, b in m.graph.edges:
+        pa = (m.contexts.get(a) or Context(id=a)).phase
+        pb = (m.contexts.get(b) or Context(id=b)).phase
+        if pa and pb and pa != pb and in_conflict(pa, pb):
+            out.append({"a": a, "b": b, "phase_a": pa, "phase_b": pb, "issue": issue})
     return out
 
 

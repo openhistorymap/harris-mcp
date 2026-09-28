@@ -99,7 +99,13 @@ def record(rng: random.Random, truth: nx.DiGraph, units: list[str], meta: dict, 
            name: str, first_number: int, shared: set[str], *, noise: float, dropout: float,
            split: float, lump: float) -> Record:
     rec = Record(name)
-    g = truth.subgraph(units).copy()
+    # Built explicitly, in the ground truth's order: a networkx subgraph view
+    # iterates a node subset in hash order, which would make the random draws
+    # below depend on PYTHONHASHSEED.
+    keep = set(units)
+    g = nx.DiGraph()
+    g.add_nodes_from(units)
+    g.add_edges_from((a, b) for a, b in truth.edges if a in keep and b in keep)
     owner = {u: u for u in units}
 
     # Lumping: two adjacent shared units recorded as one, only where the

@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>harris-mcp</title>
+<meta name="description" content="A Model Context Protocol server that gives language models structured, auditable access to archaeological Harris matrices.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,500..700&display=swap">
+<style>
+:root {
+  --bg: #f5f1e8; --surface: #ebe4d6; --ink: #1e1a15; --ink-2: #4a4238; --muted: #5a5247;
+  --accent: #a94e24; --accent-ink: #fbf6ee; --link: #2e5a78; --rule: #d8cfbe;
+  --code-bg: #1e1a15; --code-ink: #f5f1e8; --code-accent: #e0915f;
+  --serif: 'Source Serif 4', Georgia, serif; --sans: 'IBM Plex Sans', Arial, sans-serif;
+  --mono: 'IBM Plex Mono', 'Courier New', monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1a1713; --surface: #262119; --ink: #f2ede3; --ink-2: #cfc5b4; --muted: #b3a894;
+    --accent: #e0915f; --accent-ink: #1e1a15; --link: #8fb8d6; --rule: #3a3229;
+    --code-bg: #0f0d0a; --code-ink: #f2ede3; --code-accent: #e0915f;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1a1713; --surface: #262119; --ink: #f2ede3; --ink-2: #cfc5b4; --muted: #b3a894;
+  --accent: #e0915f; --accent-ink: #1e1a15; --link: #8fb8d6; --rule: #3a3229;
+  --code-bg: #0f0d0a; --code-ink: #f2ede3; --code-accent: #e0915f;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.6 var(--sans); }
+a { color: var(--link); text-underline-offset: 3px; }
+a:hover { text-decoration-thickness: 2px; }
+.wrap { max-width: 960px; margin: 0 auto; padding: 0 16px; }
+@media (min-width: 720px) { .wrap { padding: 0 32px; } }
+
+header.site { border-bottom: 1px solid var(--rule); }
+header.site .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 60px; flex-wrap: wrap; }
+.brand { font: 600 18px/1 var(--mono); color: var(--ink); text-decoration: none; }
+nav.top { display: flex; gap: 18px; flex-wrap: wrap; font-size: 15px; }
+nav.top a { color: var(--ink-2); text-decoration: none; }
+nav.top a:hover { color: var(--ink); text-decoration: underline; }
+
+.hero { padding: 64px 0 40px; border-left: 6px solid var(--accent); margin-left: -6px; }
+.eyebrow { font: 500 13px/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--accent); margin: 0 0 14px; }
+h1 { font: 600 clamp(40px, 7vw, 68px)/1.04 var(--serif); margin: 0 0 18px; letter-spacing: -.01em; }
+.lede { font-size: clamp(18px, 2.4vw, 22px); line-height: 1.5; color: var(--ink-2); max-width: 44ch; margin: 0 0 28px; }
+.actions { display: flex; gap: 12px; flex-wrap: wrap; }
+.btn { display: inline-block; padding: 11px 18px; border-radius: 8px; font-weight: 600; text-decoration: none; font-size: 15px; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); }
+.btn.ghost { border: 1px solid var(--rule); color: var(--ink); }
+
+section.block { padding: 48px 0; border-top: 1px solid var(--rule); }
+h2 { font: 600 clamp(28px, 4vw, 38px)/1.15 var(--serif); margin: 0 0 16px; }
+h3 { font: 600 19px/1.3 var(--sans); margin: 28px 0 8px; }
+p { margin: 0 0 14px; max-width: 70ch; }
+.muted { color: var(--muted); }
+
+.split { display: grid; gap: 16px; grid-template-columns: 1fr; margin: 20px 0 8px; }
+@media (min-width: 720px) { .split { grid-template-columns: repeat(3, 1fr); } }
+.card { background: var(--surface); border-radius: 10px; padding: 18px 20px; }
+.card h3 { margin: 0 0 6px; }
+.card p { margin: 0; color: var(--ink-2); font-size: 16px; }
+
+pre, code { font-family: var(--mono); font-size: 14.5px; }
+code { background: var(--surface); padding: 1px 5px; border-radius: 4px; }
+pre { background: var(--code-bg); color: var(--code-ink); padding: 16px 18px; border-radius: 10px; overflow-x: auto; line-height: 1.55; margin: 12px 0 18px; }
+pre code { background: none; padding: 0; color: inherit; }
+pre .c { color: #a89d8a; }
+pre .k { color: var(--code-accent); }
+
+.table-scroll { overflow-x: auto; margin: 12px 0 18px; -webkit-overflow-scrolling: touch; }
+table { border-collapse: collapse; width: 100%; font-size: 15.5px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-weight: 600; color: var(--ink-2); font-size: 14px; letter-spacing: .02em; }
+td code { white-space: nowrap; }
+table.resources td code { white-space: normal; overflow-wrap: anywhere; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+tr.best td.num strong { color: var(--accent); }
+
+.tools { display: grid; gap: 8px 32px; grid-template-columns: 1fr; }
+@media (min-width: 720px) { .tools { grid-template-columns: 1fr 1fr; } }
+.tool-group { margin-bottom: 18px; }
+.tool-group h3 { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid var(--accent); padding-bottom: 6px; margin-bottom: 8px; }
+.tool-group h3 span { font: 500 14px var(--mono); color: var(--muted); }
+.tool-group dl { margin: 0; }
+.tool-group dt { font: 500 14.5px/1.4 var(--mono); margin-top: 8px; overflow-wrap: anywhere; }
+.tool-group dd { margin: 2px 0 0; color: var(--ink-2); font-size: 15px; }
+
+.steps { counter-reset: s; list-style: none; padding: 0; margin: 16px 0; display: grid; gap: 12px; }
+.steps li { counter-increment: s; background: var(--surface); border-radius: 10px; padding: 14px 18px 14px 56px; position: relative; }
+.steps li::before { content: counter(s); position: absolute; left: 18px; top: 13px; font: 600 20px/1 var(--serif); color: var(--accent); }
+.steps b { display: block; }
+
+figure { margin: 20px 0; }
+figure .plate { background: #ffffff; border-radius: 10px; padding: 12px; border: 1px solid var(--rule); }
+figure img { width: 100%; height: auto; display: block; }
+figcaption { font-size: 14.5px; color: var(--muted); margin-top: 8px; }
+
+.kpis { display: grid; gap: 12px; grid-template-columns: 1fr; margin: 18px 0; }
+@media (min-width: 720px) { .kpis { grid-template-columns: repeat(3, 1fr); } }
+.kpi { border-left: 4px solid var(--accent); padding: 4px 0 4px 14px; }
+.kpi strong { display: block; font: 600 30px/1.1 var(--serif); }
+.kpi span { color: var(--ink-2); font-size: 15px; }
+
+footer.site { border-top: 1px solid var(--rule); padding: 32px 0 48px; font-size: 14.5px; color: var(--muted); }
+footer.site p { max-width: none; }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="#top">harris-mcp</a>
+    <nav class="top" aria-label="Sections">
+      <a href="#start">Quick start</a>
+      <a href="#formats">Formats</a>
+      <a href="#tools">Tools</a>
+      <a href="#reconcile">Reconciliation</a>
+      <a href="https://github.com/openhistorymap/harris-mcp">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+<div class="wrap">
+  <div class="hero">
+    <p class="eyebrow">Open History Map · Apache 2.0</p>
+    <h1>Harris matrices as structured context for language models</h1>
+    <p class="lede">harris-mcp is a Model Context Protocol server. It loads stratigraphic matrices from the formats archaeologists use, lets a model query them as a graph, and records every interpretive edit on a changelog a person can audit.</p>
+    <div class="actions">
+      <a class="btn primary" href="#start">Connect a client</a>
+      <a class="btn ghost" href="https://github.com/openhistorymap/harris-mcp">Source on GitHub</a>
+    </div>
+  </div>
+</div>
+
+<section class="block" id="why">
+  <div class="wrap">
+    <h2>The split</h2>
+    <p>Deterministic graph work happens on the server; interpretation happens on the model; every edit lands on a changelog.</p>
+    <div class="split">
+      <div class="card"><h3>Server</h3><p>Parsing, validation, ordering, candidate matching and consistency checks. Deterministic and tested.</p></div>
+      <div class="card"><h3>Model</h3><p>Proposes phasings and correspondences from dense, structured reads, not from a screenshot.</p></div>
+      <div class="card"><h3>Person</h3><p>Reads the changelog, with a note and an author on every edit, then diffs or reverts.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="start">
+  <div class="wrap">
+    <h2>Quick start</h2>
+    <h3>Use the public instance</h3>
+    <p>Any MCP client that speaks SSE can connect. With Claude Code:</p>
+<pre><code><span class="k">claude</span> mcp add --transport sse harris https://harris.openhistorymap.org/mcp/sse</code></pre>
+    <p class="muted">The public instance has no authentication yet and keeps matrices in memory. Do not load unpublished project data there; run your own.</p>
+    <h3>Run your own</h3>
+<pre><code><span class="k">docker</span> build -t harris-mcp .
+<span class="k">docker</span> run --rm -p 8000:8000 -v "$PWD/data:/data:ro" harris-mcp
+<span class="c"># MCP endpoint: http://localhost:8000/mcp/sse   health: GET /</span></code></pre>
+    <h3>A first session</h3>
+    <ol class="steps">
+      <li><b>Open a matrix</b><code>open_matrix("/data/fig12")</code> returns a handle, its size, depth and a validation report.</li>
+      <li><b>Read it densely</b><code>describe_context(id, "15")</code> returns the unit, its neighbours above and below, its phase and any cross-document links.</li>
+      <li><b>Edit with a reason</b><code>assign_phase(id, "9", "Phase II", note="C14 LAB-1 fits the lower phase")</code> lands on <code>history</code>.</li>
+      <li><b>Save</b><code>save_matrix(id, "fig12.hmdp.json")</code> keeps the changelog with the matrix.</li>
+    </ol>
+  </div>
+</section>
+
+<section class="block" id="formats">
+  <div class="wrap">
+    <h2>Formats</h2>
+    <p>HMDP, an open JSON package defined here, is the pivot: every adapter reads into it and writes out of it.</p>
+    <div class="table-scroll">
+    <table>
+      <thead><tr><th>Format</th><th>Read</th><th>Write</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>HMDP <code>.json</code></td><td>yes</td><td>yes</td><td>Canonical and lossless, including the changelog</td></tr>
+        <tr><td>CSV, XLSX</td><td>yes</td><td>yes</td><td><code>contexts</code> + <code>relations</code> tables, or an <code>above</code>/<code>below</code> edge list</td></tr>
+        <tr><td>hm tables (T. S. Dye)</td><td>yes</td><td>no</td><td>Frictionless <code>datapackage.json</code> or an hm <code>.ini</code> project, a folder or a <code>.zip</code></td></tr>
+        <tr><td>HMCX (Harris Matrix Composer)</td><td>yes</td><td>no</td><td>GraphML inside a zip; phase and period groups become attributes</td></tr>
+        <tr><td>HMC CSV export</td><td>yes</td><td>no</td><td>Semicolon file starting <code>HEADER;</code>, Latin-1 tolerated</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p>Every relation verb is canonicalised: <code>above</code>, <code>below</code>, <code>cuts</code> and <code>fills</code> become edges of a directed acyclic graph from upper to lower unit; <code>equal</code> and <code>contemporary</code> join a union-find class. The original verb stays on the relation.</p>
+  </div>
+</section>
+
+<section class="block" id="tools">
+  <div class="wrap">
+    <h2>Tool reference</h2>
+    <p class="muted">Generated from the server by <code>docs/gen_reference.py</code>.</p>
+<!-- tools:start -->
+<p>50 tools and 7 resources.</p>
+<div class="tools">
+<div class="tool-group"><h3>Load and save <span>5</span></h3><dl>
+<dt>open_matrix</dt><dd>Load a Harris matrix file and return its handle.</dd>
+<dt>open_corpus</dt><dd>Load several matrix files at once.</dd>
+<dt>close_matrix</dt><dd>Close an open matrix and free it from the registry.</dd>
+<dt>list_open_matrices</dt><dd>Summaries of every open matrix: id, name, size, depth.</dd>
+<dt>save_matrix</dt><dd>Write a matrix to `path` (format from the extension, or `fmt`).</dd>
+</dl></div>
+<div class="tool-group"><h3>Read units <span>4</span></h3><dl>
+<dt>get_context</dt><dd>One context (unit) with all its fields and attributes.</dd>
+<dt>list_contexts</dt><dd>Contexts filtered by phase, period, type, group or geometry.</dd>
+<dt>count_contexts</dt><dd>Number of contexts per phase, period, type or group.</dd>
+<dt>search_contexts</dt><dd>Substring (case-insensitive) match across id, description, and attrs.</dd>
+</dl></div>
+<div class="tool-group"><h3>Read relations <span>7</span></h3><dl>
+<dt>neighbors</dt><dd>Units directly above, below or contemporary with `ctx`, up to `depth` steps.</dd>
+<dt>ancestors</dt><dd>All units stratigraphically earlier than `ctx` (transitive): below it.</dd>
+<dt>descendants</dt><dd>All units stratigraphically later than `ctx` (transitive): above it.</dd>
+<dt>relation</dt><dd>Return the stratigraphic relationship between `a` and `b`.</dd>
+<dt>path</dt><dd>Shortest stratigraphic path from `a` to `b`, or null if unordered.</dd>
+<dt>between</dt><dd>Units strictly between two contexts on the partial order.</dd>
+<dt>contemporaries</dt><dd>Units recorded as the same as, or contemporary with, `ctx`.</dd>
+</dl></div>
+<div class="tool-group"><h3>Whole matrix <span>11</span></h3><dl>
+<dt>topological_layers</dt><dd>The Harris layout: contexts grouped by topological generation, earliest first.</dd>
+<dt>phases</dt><dd>Every phase and its member contexts.</dd>
+<dt>phase_sequence</dt><dd>Phase order implied by the stratigraphy, earliest first.</dd>
+<dt>periods</dt><dd>Every period and its member contexts.</dd>
+<dt>phase_contexts</dt><dd>Contexts of one phase, in stratigraphic order (latest first).</dd>
+<dt>validate</dt><dd>Structural diagnostics: cycles, dangling references, redundant edges, orphans.</dd>
+<dt>summary</dt><dd>Size, depth and changelog length of an open matrix.</dd>
+<dt>anomalies</dt><dd>Phase assignments that violate the stratigraphic partial order.</dd>
+<dt>describe_context</dt><dd>High-density read: context + neighborhood + phase + correspondences.</dd>
+<dt>describe_phase</dt><dd>High-density read of a phase: members, units bordering it above and below, anomalies.</dd>
+<dt>boundary_contexts</dt><dd>Contexts in `phase` that touch units outside the phase.</dd>
+</dl></div>
+<div class="tool-group"><h3>Edit (changelogged) <span>8</span></h3><dl>
+<dt>add_context</dt><dd>Add a context.</dd>
+<dt>update_context</dt><dd>Patch fields of a context.</dd>
+<dt>delete_context</dt><dd>Delete a context and its relations.</dd>
+<dt>add_relation</dt><dd>Add a relation (above, below, cuts, fills, equal, contemporary, ...).</dd>
+<dt>remove_relation</dt><dd>Remove a relation between `a` and `b` (optionally only of `kind`).</dd>
+<dt>assign_phase</dt><dd>Set the phase of a context.</dd>
+<dt>mark_contemporary</dt><dd>Record two contexts as contemporary.</dd>
+<dt>attach_note</dt><dd>Append a free-form interpretive note to a context&#x27;s `attrs.notes` list.</dd>
+</dl></div>
+<div class="tool-group"><h3>Provenance <span>3</span></h3><dl>
+<dt>history</dt><dd>The changelog of a matrix, oldest first: op, arguments, note, author, time.</dd>
+<dt>revert</dt><dd>Mark a changelog entry as reverted and undo its effect.</dd>
+<dt>diff</dt><dd>Return the changelog slice between two entry ids (inclusive).</dd>
+</dl></div>
+<div class="tool-group"><h3>Cross-document <span>8</span></h3><dl>
+<dt>query_corpus</dt><dd>Search across every open matrix.</dd>
+<dt>cross_reference</dt><dd>Suggest candidate matches between two matrices, best first.</dd>
+<dt>propose_reconciliation</dt><dd>Propose which units of `matrix_a` and `matrix_b` are the same unit.</dd>
+<dt>assert_correspondence</dt><dd>Record a cross-document correspondence — the LLM&#x27;s interpretive conclusion.</dd>
+<dt>check_correspondences</dt><dd>Merge matrices through their `same_as` correspondences and report stratigraphic contradictions: groups of units that end up both above and below one another, with the correspondences involved.</dd>
+<dt>correspondences</dt><dd>Asserted cross-document correspondences, optionally for one matrix or context.</dd>
+<dt>compare_phases</dt><dd>Phases shared by two matrices and those found in only one, with sizes.</dd>
+<dt>compare_periods</dt><dd>Periods shared by two matrices and those found in only one.</dd>
+</dl></div>
+<div class="tool-group"><h3>Output <span>4</span></h3><dl>
+<dt>render</dt><dd>Render the matrix.</dd>
+<dt>subgraph</dt><dd>Local stratigraphy around `roots`, as an HMDP-shaped subset.</dd>
+<dt>export_geojson</dt><dd>FeatureCollection of contexts that carry geometry.</dd>
+<dt>link_ohm_feature</dt><dd>Record a cross-reference from a stratigraphic context to an Open History Map feature id.</dd>
+</dl></div>
+</div>
+<h3>Resources</h3><div class="table-scroll"><table class="resources"><tbody>
+<tr><td><code>harris://corpus/correspondences</code></td></tr>
+<tr><td><code>harris://matrices</code></td></tr>
+<tr><td><code>harris://matrix/{matrix_id}/context/{ctx}</code></td></tr>
+<tr><td><code>harris://matrix/{matrix_id}/context/{ctx}/describe</code></td></tr>
+<tr><td><code>harris://matrix/{matrix_id}/diagnostics</code></td></tr>
+<tr><td><code>harris://matrix/{matrix_id}/layers</code></td></tr>
+<tr><td><code>harris://matrix/{matrix_id}/summary</code></td></tr>
+</tbody></table></div>
+<!-- tools:end -->
+  </div>
+</section>
+
+<section class="block" id="reconcile">
+  <div class="wrap">
+    <h2>Reconciling units across records</h2>
+    <p>When two teams record the same deposits, which of their units are the same unit? <code>propose_reconciliation</code> answers in three layers and writes nothing:</p>
+    <ol class="steps">
+      <li><b>Candidates</b>Description similarity, compared only between units of the same period and type.</li>
+      <li><b>Structural agreement</b>A match scores higher when its matched neighbours sit on the same side, above or below; the matching is refined over a few rounds.</li>
+      <li><b>Cycle refusal</b>A match whose merge would put a unit both above and below another is rejected and listed.</li>
+    </ol>
+    <p>The model or a person then records conclusions with <code>assert_correspondence</code>, which reports any contradiction it introduces; <code>check_correspondences</code> audits the whole set.</p>
+
+    <h3>Evaluation</h3>
+    <p>A <a href="https://github.com/openhistorymap/harris-mcp/blob/main/sim/README.md">simulation</a> takes Cessford's Çatalhöyük Buildings 1 and 5 matrix (705 units, 852 relations) as ground truth. Two simulated teams record overlapping parts of it with their own numbering, noisy descriptions, missed relations and split or merged units. Four reconcilers, a cumulative ablation of the tool, are scored against the truth: 8 scenarios, 10 seeds each, all through the MCP interface.</p>
+<!-- results:start -->
+<div class="kpis">
+<div class="kpi"><strong>0.83 vs 0.67</strong><span>F1 with structure vs text + period/type, trench overlap, 20% description noise</span></div>
+<div class="kpi"><strong>0.68 vs 0.40</strong><span>the same for a full re-recording of 705 units</span></div>
+<div class="kpi"><strong>0 vs 1,317</strong><span>units in a stratigraphic contradiction, with the cycle check vs text matching alone</span></div>
+</div>
+<figure><div class="plate"><img src="assets/fig-reconcile-f1.svg" width="660" height="290" alt="Two line charts of F1 against description noise (0, 20%, 40%) for four reconcilers. In both the trench and the full re-recording scenario, the method adding structure scores highest at every noise level, text-only matching lowest."></div><figcaption>F1 of recovered same-as pairs, mean ± sd over 10 seeds, relation dropout 10%.</figcaption></figure>
+<div class="table-scroll"><table><thead><tr><th>Overlap</th><th>Noise</th><th>Dropout</th>
+<th>text</th>
+<th>+ period/type</th>
+<th>+ cycle check</th>
+<th>+ structure</th>
+</tr></thead><tbody>
+<tr><td>trench</td><td>0%</td><td>10%</td>
+<td class="num">0.32 ± 0.02<br><span class="muted">530 in cycles</span></td>
+<td class="num">0.95 ± 0.02<br><span class="muted">1 in cycles</span></td>
+<td class="num">0.95 ± 0.02<br><span class="muted">0 in cycles</span></td>
+<td class="num"><strong>0.96 ± 0.02</strong><br><span class="muted">0 in cycles</span></td>
+</tr>
+<tr><td>trench</td><td>20%</td><td>10%</td>
+<td class="num">0.13 ± 0.01<br><span class="muted">579 in cycles</span></td>
+<td class="num">0.67 ± 0.06<br><span class="muted">33 in cycles</span></td>
+<td class="num">0.70 ± 0.07<br><span class="muted">0 in cycles</span></td>
+<td class="num"><strong>0.83 ± 0.05</strong><br><span class="muted">0 in cycles</span></td>
+</tr>
+<tr><td>trench</td><td>40%</td><td>10%</td>
+<td class="num">0.05 ± 0.02<br><span class="muted">591 in cycles</span></td>
+<td class="num">0.37 ± 0.09<br><span class="muted">68 in cycles</span></td>
+<td class="num">0.38 ± 0.09<br><span class="muted">0 in cycles</span></td>
+<td class="num"><strong>0.52 ± 0.14</strong><br><span class="muted">0 in cycles</span></td>
+</tr>
+<tr><td>trench</td><td>40%</td><td>30%</td>
+<td class="num">0.05 ± 0.02<br><span class="muted">230 in cycles</span></td>
+<td class="num">0.37 ± 0.09<br><span class="muted">24 in cycles</span></td>
+<td class="num">0.37 ± 0.09<br><span class="muted">0 in cycles</span></td>
+<td class="num"><strong>0.42 ± 0.10</strong><br><span class="muted">0 in cycles</span></td>
+</tr>
+<tr><td>full</td><td>0%</td><td>10%</td>
+<td class="num">0.80 ± 0.01<br><span class="muted">1,028 in cycles</span></td>
+<td class="num">0.84 ± 0.01<br><span class="muted">850 in cycles</span></td>
+<td class="num">0.84 ± 0.02<br><span class="muted">0 in cycles</span></td>
+<td class="num"><strong>0.93 ± 0.01</strong><br><span class="muted">0 in cycles</span></td>
+</tr>
+<tr><td>full</td><td>20%</td><td>10%</td>
+<td class="num">0.29 ± 0.02<br><span class="muted">1,287 in cycles</span></td>
+<td class="num">0.40 ± 0.02<br><span class="muted">1,202 in cycles</span></td>
+<td class="num">0.43 ± 0.02<br><span class="muted">0 in cycles</span></td>
+<td class="num"><strong>0.68 ± 0.03</strong><br><span class="muted">0 in cycles</span></td>
+</tr>
+<tr><td>full</td><td>40%</td><td>10%</td>
+<td class="num">0.09 ± 0.01<br><span class="muted">1,317 in cycles</span></td>
+<td class="num">0.15 ± 0.01<br><span class="muted">1,273 in cycles</span></td>
+<td class="num">0.16 ± 0.02<br><span class="muted">0 in cycles</span></td>
+<td class="num"><strong>0.25 ± 0.03</strong><br><span class="muted">0 in cycles</span></td>
+</tr>
+<tr><td>full</td><td>40%</td><td>30%</td>
+<td class="num">0.09 ± 0.01<br><span class="muted">998 in cycles</span></td>
+<td class="num">0.15 ± 0.01<br><span class="muted">910 in cycles</span></td>
+<td class="num">0.16 ± 0.01<br><span class="muted">0 in cycles</span></td>
+<td class="num"><strong>0.22 ± 0.03</strong><br><span class="muted">0 in cycles</span></td>
+</tr>
+</tbody></table></div>
+<!-- results:end -->
+    <p class="muted">Descriptions are synthetic and both teams share period names, which flatters the period filter. Design, caveats and reproduction steps: <a href="https://github.com/openhistorymap/harris-mcp/blob/main/sim/README.md">sim/README.md</a>; raw data: <a href="https://github.com/openhistorymap/harris-mcp/tree/main/sim/results">sim/results/</a>.</p>
+  </div>
+</section>
+
+<section class="block" id="data">
+  <div class="wrap">
+    <h2>Datasets used</h2>
+    <div class="table-scroll">
+    <table>
+      <thead><tr><th>Dataset</th><th>Source</th><th>Licence</th></tr></thead>
+      <tbody>
+        <tr><td>Harris, fig. 12</td><td>E. C. Harris, as packaged by T. S. Dye</td><td>see source</td></tr>
+        <tr><td>Çatalhöyük East Mound, Buildings 1 and 5</td><td>Matrix by C. Cessford, via <a href="https://github.com/tsdye/harris-matrix/tree/master/examples/bldg-1-5">T. S. Dye's hm examples</a></td><td>GPL-3.0</td></tr>
+        <tr><td>Ulm-Eggingen</td><td>E. Rosenstock, <i>Linear Pottery and Harris</i> (2022), <a href="https://doi.org/10.5281/zenodo.5534232">doi:10.5281/zenodo.5534232</a></td><td>CC BY 4.0</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    <p>harris-mcp is part of <a href="https://www.openhistorymap.org/">Open History Map</a>. Licensed under Apache 2.0. Design rationale: <a href="https://github.com/openhistorymap/harris-mcp/blob/main/docs/paper-outline.md">paper outline</a>.</p>
+  </div>
+</footer>
+</body>
+</html>

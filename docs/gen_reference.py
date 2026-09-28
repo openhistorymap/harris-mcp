@@ -56,22 +56,25 @@ async def _tools() -> tuple[dict[str, str], list[str]]:
     return tools, uris
 
 
+def _inline_code(text: str) -> str:
+    """Escape a description and render its `backticked` spans as code."""
+    return re.sub(r"`([^`]+)`", r"<code>\1</code>", html.escape(text))
+
+
 def tools_html(tools: dict[str, str], uris: list[str]) -> str:
     grouped = {n for names in GROUPS.values() for n in names}
     missing = sorted(set(tools) - grouped)
     stale = sorted(grouped - set(tools))
     if missing or stale:
         raise SystemExit(f"GROUPS out of date: missing {missing}, no longer served {stale}")
-    out = [f'<p>{len(tools)} tools and {len(uris)} resources.</p>', '<div class="tools">']
+    out = ['<div class="hm-toolref">']
     for group, names in GROUPS.items():
-        out.append(f'<div class="tool-group"><h3>{html.escape(group)} <span>{len(names)}</span></h3><dl>')
-        for n in names:
-            out.append(f"<dt>{n}</dt><dd>{html.escape(tools[n])}</dd>")
-        out.append("</dl></div>")
-    out.append("</div>")
-    out.append('<h3>Resources</h3><div class="table-scroll"><table class="resources"><tbody>')
-    out += [f"<tr><td><code>{html.escape(u)}</code></td></tr>" for u in sorted(uris)]
-    out.append("</tbody></table></div>")
+        out.append(f'<section><h3>{html.escape(group)} <span>{len(names)}</span></h3><dl>')
+        out += [f"<div><dt>{n}</dt><dd>{_inline_code(tools[n])}</dd></div>" for n in names]
+        out.append("</dl></section>")
+    out.append(f'<section><h3>Resources <span>{len(uris)}</span></h3><ul class="hm-resources">')
+    out += [f"<li>{html.escape(u)}</li>" for u in sorted(uris)]
+    out.append("</ul></section></div>")
     return "\n".join(out)
 
 
@@ -89,32 +92,38 @@ def results_html() -> str:
     text_worst = max(float(r["contradicting_units_mean"]) for r in rows if r["method"] == "text")
     checked_worst = max(float(r["contradicting_units_mean"]) for r in rows
                         if r["method"] in ("+ cycle check", "+ structure"))
-    out = ['<div class="kpis">',
-           f'<div class="kpi"><strong>{f(trench[0]["f1_mean"])} vs {f(trench[1]["f1_mean"])}</strong>'
-           '<span>F1 with structure vs text + period/type, trench overlap, 20% description noise</span></div>',
-           f'<div class="kpi"><strong>{f(full[0]["f1_mean"])} vs {f(full[1]["f1_mean"])}</strong>'
-           '<span>the same for a full re-recording of 705 units</span></div>',
-           f'<div class="kpi"><strong>{checked_worst:,.0f} vs {text_worst:,.0f}</strong>'
-           '<span>units in a stratigraphic contradiction, with the cycle check vs text matching alone</span></div>',
+    n = rows[0]["n"]
+    out = ['<div class="hm-figures">',
+           f'<div><strong>{f(trench[0]["f1_mean"])} vs {f(trench[1]["f1_mean"])}</strong>'
+           '<span>F1, structure vs period/type filter · trench · 20% noise</span></div>',
+           f'<div><strong>{f(full[0]["f1_mean"])} vs {f(full[1]["f1_mean"])}</strong>'
+           '<span>The same · full re-recording of 705 units</span></div>',
+           f'<div><strong>{checked_worst:,.0f} vs {text_worst:,.0f}</strong>'
+           '<span>Units in a contradiction · cycle check vs text alone</span></div>',
            "</div>",
-           '<figure><div class="plate"><img src="assets/fig-reconcile-f1.svg" width="660" height="290" '
-           'alt="Two line charts of F1 against description noise (0, 20%, 40%) for four reconcilers. In both '
-           'the trench and the full re-recording scenario, the method adding structure scores highest at every '
-           'noise level, text-only matching lowest."></div>'
-           f'<figcaption>F1 of recovered same-as pairs, mean ± sd over {rows[0]["n"]} seeds, relation dropout 10%.</figcaption></figure>',
-           '<div class="table-scroll"><table><thead><tr><th>Overlap</th><th>Noise</th><th>Dropout</th>']
+           '<figure class="plate hm-plate" role="img" aria-label="Two line charts of F1 against description '
+           'noise (0, 20%, 40%) for four reconcilers. In both the trench and the full re-recording scenario, '
+           'adding structure scores highest at every noise level and text-only matching lowest.">'
+           '<a href="assets/fig-reconcile-f1.svg" title="Open the figure at full size">'
+           '<img src="assets/fig-reconcile-f1.svg" width="660" height="290" alt="" loading="lazy" decoding="async"></a>'
+           '<span class="tick-bl" aria-hidden="true"></span><span class="tick-br" aria-hidden="true"></span></figure>',
+           '<div class="plate-block__caption hm-caption"><span><strong>Fig. 1</strong> F1 of recovered same-as pairs</span>'
+           f'<span><strong>Mean ± sd</strong> {n} seeds</span><span><strong>Dropout</strong> 10%</span></div>',
+           '<div class="hm-table-scroll"><table class="hm-table"><thead><tr><th>Overlap</th><th>Noise</th><th>Dropout</th>']
     out += [f"<th>{html.escape(m)}</th>" for m in methods]
     out.append("</tr></thead><tbody>")
-    for o, n, d in scenarios:
-        cells = [get[(o, n, d, m)] for m in methods]
+    for o, nz, d in scenarios:
+        cells = [get[(o, nz, d, m)] for m in methods]
         best = max(float(c["f1_mean"]) for c in cells)
-        out.append(f"<tr><td>{o}</td><td>{float(n):.0%}</td><td>{float(d):.0%}</td>")
+        out.append(f"<tr><td>{o}</td><td>{float(nz):.0%}</td><td>{float(d):.0%}</td>")
         for c in cells:
             v = f'{f(c["f1_mean"])} ± {f(c["f1_sd"])}'
             v = f"<strong>{v}</strong>" if float(c["f1_mean"]) == best else v
-            out.append(f'<td class="num">{v}<br><span class="muted">{float(c["contradicting_units_mean"]):,.0f} in cycles</span></td>')
+            out.append(f'<td class="num">{v}<small>{float(c["contradicting_units_mean"]):,.0f} in cycles</small></td>')
         out.append("</tr>")
     out.append("</tbody></table></div>")
+    out.append('<p class="marginalia">F1, mean ± sd over seeds; below it, units caught in a stratigraphic '
+               'contradiction after merging. Best F1 per row in bold.</p>')
     return "\n".join(out)
 
 

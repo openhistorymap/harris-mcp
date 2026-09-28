@@ -39,7 +39,7 @@ def main(results: Path) -> None:
     plt.rcParams.update({
         "font.family": "DejaVu Sans", "font.size": 8, "axes.edgecolor": MUTED,
         "axes.labelcolor": INK, "xtick.color": MUTED, "ytick.color": MUTED,
-        "axes.spines.top": False, "axes.spines.right": False, "pdf.fonttype": 42, "svg.fonttype": "none",
+        "axes.spines.top": False, "axes.spines.right": False, "pdf.fonttype": 42, "svg.fonttype": "path", "svg.hashsalt": "harris-mcp",
     })
     fig, axes = plt.subplots(1, 2, figsize=(6.6, 2.7), sharey=True)
     for ax, overlap in zip(axes, ("trench", "full")):
@@ -74,8 +74,9 @@ def main(results: Path) -> None:
     fig.text(0.99, 0.01, f"mean ± sd, {n} seed{'s' if n != '1' else ''}; relation dropout 10%",
              ha="right", fontsize=6.5, color=MUTED)
     fig.tight_layout()
-    for ext in ("pdf", "svg"):
-        fig.savefig(results / f"fig-reconcile-f1.{ext}", bbox_inches="tight")
+    # No embedded dates, so regenerating from the same summary.csv gives the same bytes.
+    for ext, meta in (("pdf", {"CreationDate": None}), ("svg", {"Date": None})):
+        fig.savefig(results / f"fig-reconcile-f1.{ext}", bbox_inches="tight", metadata=meta)
     print(f"wrote {results}/fig-reconcile-f1.pdf, .svg")
 
 

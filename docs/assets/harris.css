@@ -1,0 +1,90 @@
+/* harris-mcp documentation: page components on top of ohm.css.
+   Only Open History Map tokens are used; see ohm.css for their values. */
+
+@layer components {
+  /* ohm.css's base `li + li` spacing also lands in the nav row, lifting its
+     first item; keep the row on one baseline. */
+  .nav__list > li + li { margin-top: 0; }
+
+  /* A sheet: marginalia in the left margin, prose in the main column,
+     wide material (tables, figures) across both. */
+  .sheet { grid-column: margin-l / margin-r; display: grid; grid-template-columns: subgrid; row-gap: var(--sp-4); }
+  .sheet > .section-rule { grid-column: margin-l / margin-r; margin-bottom: var(--sp-2); }
+  .sheet__margin { grid-column: margin-l / main-l; }
+  .sheet__main { grid-column: main-l / main-r; min-width: 0; }
+  .sheet__wide { grid-column: margin-l / margin-r; min-width: 0; }
+  @media (max-width: 720px) {
+    .sheet__margin, .sheet__wide { grid-column: main-l / main-r; }
+  }
+
+  .marginalia { font-family: var(--font-meta); font-size: var(--t-meta); text-transform: uppercase; letter-spacing: .06em; color: var(--ink-muted); display: grid; gap: var(--sp-3); align-content: start; padding-top: .35rem; }
+  .marginalia dl { display: grid; gap: var(--sp-3); }
+  .marginalia dt { color: var(--ink-faint); }
+  .marginalia dd { margin: 0; color: var(--ink-muted); }
+  @media (max-width: 720px) {
+    .marginalia dl { grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); }
+  }
+
+  .sheet__main > * + * { margin-top: var(--sp-4); }
+  .sheet__main h3 { font-size: var(--t-h4); margin-top: var(--sp-8); }
+  .sheet__main h3:first-child { margin-top: 0; }
+
+
+  /* Ledger: a ruled two-column list (term, explanation). */
+  .hm-ledger { border-top: 1px solid var(--rule); }
+  .hm-ledger > div { display: grid; grid-template-columns: 7rem 1fr; gap: var(--sp-4); padding-block: var(--sp-3); border-bottom: 1px solid var(--rule); align-items: baseline; }
+  .hm-ledger dt { font-family: var(--font-display); font-size: var(--t-body-lg); font-weight: var(--w-medium); }
+  .hm-ledger dd { margin: 0; color: var(--ink-muted); font-size: var(--t-body-sm); max-width: 52ch; }
+  @media (max-width: 480px) { .hm-ledger > div { grid-template-columns: 1fr; gap: var(--sp-1); } }
+
+  /* Numbered steps, numbers in the meta register. */
+  .hm-steps { list-style: none; padding: 0; border-top: 1px solid var(--rule); counter-reset: step; }
+  .hm-steps > li { counter-increment: step; display: grid; grid-template-columns: 2.5rem 1fr; gap: var(--sp-4); padding-block: var(--sp-4); border-bottom: 1px solid var(--rule); margin: 0; max-width: none; }
+  .hm-steps > li::before { content: counter(step, decimal-leading-zero); font-family: var(--font-meta); font-size: var(--t-meta); color: var(--ink-faint); padding-top: .3rem; }
+  .hm-steps b { display: block; font-weight: var(--w-semi); }
+  .hm-steps p { margin: var(--sp-1) 0 0; font-size: var(--t-body-sm); color: var(--ink-muted); }
+  .hm-steps code { overflow-wrap: anywhere; }
+
+  /* Ruled tables. */
+  .hm-table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .hm-caption + .hm-table-scroll { margin-top: var(--sp-8); }
+  .hm-toolref dd code { font-size: .88em; }
+  .hm-table { width: 100%; border-collapse: collapse; font-size: var(--t-body-sm); border-top: 1px solid var(--rule-strong); }
+  .hm-table th { font-family: var(--font-meta); font-size: var(--t-meta); font-weight: var(--w-body); text-transform: uppercase; letter-spacing: .06em; color: var(--ink-muted); text-align: left; padding: var(--sp-3) var(--sp-3) var(--sp-2) 0; border-bottom: 1px solid var(--rule-strong); vertical-align: bottom; }
+  .hm-table td { padding: var(--sp-3) var(--sp-3) var(--sp-3) 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  .hm-table td.num { font-variant-numeric: tabular-nums lining-nums; white-space: nowrap; }
+  .hm-table td.num small { display: block; font-family: var(--font-meta); font-size: var(--t-meta); color: var(--ink-faint); letter-spacing: .02em; }
+  .hm-table td.num strong { font-weight: var(--w-bold); }
+  .hm-table code { white-space: nowrap; }
+
+  /* Tool reference: groups of ruled name/description rows. */
+  .hm-toolref { display: grid; gap: var(--sp-8) var(--sp-12); grid-template-columns: 1fr; }
+  @media (min-width: 900px) { .hm-toolref { grid-template-columns: 1fr 1fr; } }
+  .hm-toolref h3 { font-family: var(--font-meta); font-size: var(--t-meta); font-weight: var(--w-body); text-transform: uppercase; letter-spacing: .08em; color: var(--ink-muted); display: flex; justify-content: space-between; padding-bottom: var(--sp-2); border-bottom: 1px solid var(--rule-strong); margin: 0; }
+  .hm-toolref h3 span { color: var(--ink-faint); }
+  .hm-toolref dl > div { display: grid; grid-template-columns: minmax(0, 12.5rem) 1fr; gap: var(--sp-4); padding-block: var(--sp-2); border-bottom: 1px solid var(--rule); align-items: baseline; }
+  .hm-toolref dt { font-family: var(--font-meta); font-size: var(--t-meta-lg); overflow-wrap: anywhere; }
+  .hm-toolref dd { margin: 0; font-size: var(--t-body-sm); color: var(--ink-muted); }
+  @media (max-width: 480px) { .hm-toolref dl > div { grid-template-columns: 1fr; gap: 0; } }
+  .hm-resources { list-style: none; padding: 0; border-top: 1px solid var(--rule); }
+  .hm-resources li { font-family: var(--font-meta); font-size: var(--t-meta-lg); padding-block: var(--sp-2); border-bottom: 1px solid var(--rule); margin: 0; overflow-wrap: anywhere; max-width: none; }
+
+  /* Headline figures, set like plate captions. */
+  .hm-figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule); }
+  .hm-figures > div { padding: var(--sp-4) var(--sp-4) var(--sp-4) 0; display: grid; gap: var(--sp-2); align-content: start; }
+  .hm-figures > div + div { border-left: 1px solid var(--rule); padding-left: var(--sp-4); }
+  @media (max-width: 600px) { .hm-figures > div + div { border-left: none; border-top: 1px solid var(--rule); padding-left: 0; } }
+  .hm-figures strong { font-family: var(--font-display); font-size: var(--t-h3); font-weight: var(--w-medium); line-height: 1; font-variant-numeric: lining-nums tabular-nums; }
+  .hm-figures span { font-family: var(--font-meta); font-size: var(--t-meta); text-transform: uppercase; letter-spacing: .05em; color: var(--ink-muted); }
+
+}
+
+/* ohm.css orders the plate layer after components, so overrides of plate
+   components must live in it. */
+@layer plate {
+  .article-head .plate-block__nav { margin-top: var(--sp-2); }
+  .plate.hm-plate { aspect-ratio: auto; background: oklch(0.99 0.004 80); padding: var(--sp-4); overflow: visible; margin-top: var(--sp-4); }
+  .plate.hm-plate img { height: auto; object-fit: contain; }
+  .plate.hm-plate:hover img { transform: none; }
+  .plate-block__caption.hm-caption { margin-top: var(--sp-6); }
+}

@@ -87,12 +87,14 @@ def open_corpus(paths: list[str], fmt: str = "auto") -> dict:
 
 @mcp.tool
 def close_matrix(matrix_id: str) -> dict:
+    """Close an open matrix and free it from the registry."""
     registry.close(matrix_id)
     return {"closed": matrix_id, "open_matrices": registry.list_ids()}
 
 
 @mcp.tool
 def list_open_matrices() -> list[dict]:
+    """Summaries of every open matrix: id, name, size, depth."""
     return [_matrix_summary(m) for m in registry.all_matrices()]
 
 
@@ -103,6 +105,7 @@ def list_open_matrices() -> list[dict]:
 
 @mcp.tool
 def get_context(matrix_id: str, ctx: str) -> dict:
+    """One context (unit) with all its fields and attributes."""
     m = registry.get(matrix_id)
     if ctx not in m.contexts:
         raise KeyError(f"No such context {ctx!r} in matrix {matrix_id!r}")
@@ -119,6 +122,7 @@ def list_contexts(
     has_geometry: Optional[bool] = None,
     limit: int = 200,
 ) -> list[dict]:
+    """Contexts filtered by phase, period, type, group or geometry."""
     m = registry.get(matrix_id)
     out: list[dict] = []
     for c in m.contexts.values():
@@ -142,6 +146,7 @@ def list_contexts(
 
 @mcp.tool
 def count_contexts(matrix_id: str, group_by: Literal["phase", "period", "type", "group"] = "phase") -> dict:
+    """Number of contexts per phase, period, type or group."""
     m = registry.get(matrix_id)
     counts: dict[str, int] = {}
     for c in m.contexts.values():
@@ -179,16 +184,18 @@ def neighbors(
     direction: Literal["above", "below", "contemporary", "any"] = "any",
     depth: int = 1,
 ) -> dict:
+    """Units directly above, below or contemporary with `ctx`, up to `depth` steps."""
     m = registry.get(matrix_id)
     g = m.graph
     if ctx not in g:
         raise KeyError(ctx)
     result: dict[str, list[str]] = {"above": [], "below": [], "contemporary": []}
+    # Edges point from the upper unit to the lower one.
     if direction in ("above", "any"):
-        nodes = nx.single_source_shortest_path_length(g, ctx, cutoff=depth)
+        nodes = nx.single_source_shortest_path_length(g.reverse(copy=False), ctx, cutoff=depth)
         result["above"] = sorted(n for n in nodes if n != ctx)
     if direction in ("below", "any"):
-        nodes = nx.single_source_shortest_path_length(g.reverse(copy=False), ctx, cutoff=depth)
+        nodes = nx.single_source_shortest_path_length(g, ctx, cutoff=depth)
         result["below"] = sorted(n for n in nodes if n != ctx)
     if direction in ("contemporary", "any"):
         root = m.equiv.find(ctx)
@@ -199,16 +206,16 @@ def neighbors(
 
 @mcp.tool
 def ancestors(matrix_id: str, ctx: str) -> list[str]:
-    """All units stratigraphically earlier than `ctx` (transitive)."""
+    """All units stratigraphically earlier than `ctx` (transitive): below it."""
     m = registry.get(matrix_id)
-    return sorted(nx.ancestors(m.graph, ctx))
+    return sorted(nx.descendants(m.graph, ctx))
 
 
 @mcp.tool
 def descendants(matrix_id: str, ctx: str) -> list[str]:
-    """All units stratigraphically later than `ctx` (transitive)."""
+    """All units stratigraphically later than `ctx` (transitive): above it."""
     m = registry.get(matrix_id)
-    return sorted(nx.descendants(m.graph, ctx))
+    return sorted(nx.ancestors(m.graph, ctx))
 
 
 @mcp.tool
@@ -250,6 +257,7 @@ def between(matrix_id: str, earlier: str, later: str) -> list[str]:
 
 @mcp.tool
 def contemporaries(matrix_id: str, ctx: str) -> list[str]:
+    """Units recorded as the same as, or contemporary with, `ctx`."""
     m = registry.get(matrix_id)
     root = m.equiv.find(ctx)
     return sorted(n for n in m.equiv.classes().get(root, []) if n != ctx)
@@ -275,18 +283,21 @@ def topological_layers(matrix_id: str) -> list[list[str]]:
 
 @mcp.tool
 def phases(matrix_id: str) -> dict:
+    """Every phase and its member contexts."""
     m = registry.get(matrix_id)
     return {p: sorted(members) for p, members in m.phases.items()}
 
 
 @mcp.tool
 def periods(matrix_id: str) -> dict:
+    """Every period and its member contexts."""
     m = registry.get(matrix_id)
     return {p: sorted(members) for p, members in m.periods.items()}
 
 
 @mcp.tool
 def phase_contexts(matrix_id: str, phase: str) -> list[str]:
+    """Contexts of one phase, in stratigraphic order (latest first)."""
     m = registry.get(matrix_id)
     members = set(m.phases.get(phase, []))
     if not members:
@@ -300,11 +311,13 @@ def phase_contexts(matrix_id: str, phase: str) -> list[str]:
 
 @mcp.tool
 def validate(matrix_id: str) -> dict:
+    """Structural diagnostics: cycles, dangling references, redundant edges, orphans."""
     return validate_matrix(registry.get(matrix_id))
 
 
 @mcp.tool
 def summary(matrix_id: str) -> dict:
+    """Size, depth and changelog length of an open matrix."""
     return _matrix_summary(registry.get(matrix_id))
 
 
@@ -385,6 +398,7 @@ def describe_context(matrix_id: str, ctx: str, neighborhood: int = 2) -> dict:
 
 @mcp.tool
 def describe_phase(matrix_id: str, phase: str) -> dict:
+    """High-density read of a phase: members, units bordering it above and below, anomalies."""
     m = registry.get(matrix_id)
     members = m.phases.get(phase, [])
     boundary_above: set[str] = set()
@@ -432,6 +446,7 @@ class ContextPatch(BaseModel):
 
 @mcp.tool
 def add_context(matrix_id: str, ctx: dict, note: Optional[str] = None, author: str = "llm") -> dict:
+    """Add a context. Recorded on the changelog with `note` and `author`."""
     m = registry.get(matrix_id)
     c = Context(**ctx)
     if c.id in m.contexts:
@@ -443,6 +458,7 @@ def add_context(matrix_id: str, ctx: dict, note: Optional[str] = None, author: s
 
 @mcp.tool
 def update_context(matrix_id: str, ctx: str, patch: dict, note: Optional[str] = None, author: str = "llm") -> dict:
+    """Patch fields of a context. Recorded on the changelog with its previous state."""
     m = registry.get(matrix_id)
     if ctx not in m.contexts:
         raise KeyError(ctx)
@@ -461,6 +477,7 @@ def update_context(matrix_id: str, ctx: str, patch: dict, note: Optional[str] = 
 
 @mcp.tool
 def delete_context(matrix_id: str, ctx: str, note: Optional[str] = None, author: str = "llm") -> dict:
+    """Delete a context and its relations. Recorded on the changelog."""
     m = registry.get(matrix_id)
     if ctx not in m.contexts:
         raise KeyError(ctx)
@@ -477,6 +494,7 @@ def delete_context(matrix_id: str, ctx: str, note: Optional[str] = None, author:
 @mcp.tool
 def add_relation(matrix_id: str, a: str, b: str, kind: str = "above",
                  note: Optional[str] = None, author: str = "llm") -> dict:
+    """Add a relation (above, below, cuts, fills, equal, contemporary, ...). Recorded on the changelog."""
     m = registry.get(matrix_id)
     rel = Relation(a=a, b=b, kind=kind)
     m.add_relation(rel)
@@ -487,6 +505,7 @@ def add_relation(matrix_id: str, a: str, b: str, kind: str = "above",
 @mcp.tool
 def remove_relation(matrix_id: str, a: str, b: str, kind: Optional[str] = None,
                     note: Optional[str] = None, author: str = "llm") -> dict:
+    """Remove a relation between `a` and `b` (optionally only of `kind`). Recorded on the changelog."""
     m = registry.get(matrix_id)
     before = len(m.relations)
     m.relations = [
@@ -505,12 +524,14 @@ def remove_relation(matrix_id: str, a: str, b: str, kind: Optional[str] = None,
 @mcp.tool
 def assign_phase(matrix_id: str, ctx: str, phase: str,
                  note: Optional[str] = None, author: str = "llm") -> dict:
+    """Set the phase of a context. Recorded on the changelog."""
     return update_context(matrix_id=matrix_id, ctx=ctx, patch={"phase": phase}, note=note, author=author)
 
 
 @mcp.tool
 def mark_contemporary(matrix_id: str, a: str, b: str,
                       note: Optional[str] = None, author: str = "llm") -> dict:
+    """Record two contexts as contemporary. Recorded on the changelog."""
     return add_relation(matrix_id=matrix_id, a=a, b=b, kind="contemporary", note=note, author=author)
 
 
@@ -533,6 +554,7 @@ def attach_note(matrix_id: str, ctx: str, note: str, author: str = "llm") -> dic
 
 @mcp.tool
 def history(matrix_id: str, limit: int = 100) -> list[dict]:
+    """The changelog of a matrix, oldest first: op, arguments, note, author, time."""
     m = registry.get(matrix_id)
     return [e.model_dump() for e in m.changelog[-limit:]]
 
@@ -756,11 +778,13 @@ def assert_correspondence(
 
 @mcp.tool
 def correspondences(matrix_id: Optional[str] = None, ctx: Optional[str] = None) -> list[dict]:
+    """Asserted cross-document correspondences, optionally for one matrix or context."""
     return [c.model_dump() for c in registry.correspondences(matrix_id, ctx)]
 
 
 @mcp.tool
 def compare_phases(matrix_a: str, matrix_b: str) -> dict:
+    """Phases shared by two matrices and those found in only one, with sizes."""
     a, b = registry.get(matrix_a), registry.get(matrix_b)
     pa, pb = set(a.phases), set(b.phases)
     return {
@@ -774,6 +798,7 @@ def compare_phases(matrix_a: str, matrix_b: str) -> dict:
 
 @mcp.tool
 def compare_periods(matrix_a: str, matrix_b: str) -> dict:
+    """Periods shared by two matrices and those found in only one."""
     a, b = registry.get(matrix_a), registry.get(matrix_b)
     pa, pb = set(a.periods), set(b.periods)
     return {
@@ -790,6 +815,7 @@ def compare_periods(matrix_a: str, matrix_b: str) -> dict:
 
 @mcp.tool
 def save_matrix(matrix_id: str, path: str, fmt: str = "auto") -> dict:
+    """Write a matrix to `path` (format from the extension, or `fmt`)."""
     m = registry.get(matrix_id)
     formats.dump(m, path, fmt=fmt)
     return {"matrix_id": matrix_id, "path": str(path), "fmt": fmt}

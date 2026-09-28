@@ -96,3 +96,18 @@ def test_hmcx_through_mcp():
     opened, layers = asyncio.run(go())
     assert opened["diagnostics"]["valid"]
     assert layers[0] == ["G"] and layers[-1] == ["T"]
+
+
+def test_neighbors_and_ancestry_directions():
+    # fig12: 7 lies above 15, 15 above 9 (observations younger -> older).
+    _, nb, earlier, later, described = run(
+        ("neighbors", {"ctx": "15"}),
+        ("ancestors", {"ctx": "15"}),
+        ("descendants", {"ctx": "15"}),
+        ("describe_context", {"ctx": "15", "neighborhood": 1}),
+    )
+    assert nb == {"above": ["7"], "below": ["9"], "contemporary": ["16"]}
+    assert earlier == ["18", "9", "Natural ground"]
+    assert "10" in later and "9" not in later
+    assert described["neighborhood"] == nb
+    assert described["ancestors"] == earlier

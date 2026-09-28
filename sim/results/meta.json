@@ -1,0 +1,134 @@
+{
+  "data": {
+    "path": "/data/catalhoyuk-bldg-1-5",
+    "matrix": "bldg-1-5-plain",
+    "contexts": 705,
+    "relations": 852,
+    "sha256": {
+      "bldg-1-5-contexts.csv": "49f8f2cb666d758890fa01bd32d01e05fb31782ef726eca95f2c599d4a126405",
+      "bldg-1-5-dates.csv": "422c7ade6c03bbfb4ed192babd23bd872ed6313f265dddc38e941149dbbc6b8d",
+      "bldg-1-5-observations.csv": "0e9ceff3c7a85a7501259229d0656bfab3a6f2cb03f4f60c391d897dcf9cab1c",
+      "bldg-1-5-periods.csv": "b3902ecfe1f67680019dd90b807f8649d36b435a4158fc1e9492e213ee7c20b0",
+      "bldg-1-5-plain.ini": "4dd94b8ee2c349d51a95c56a29105695fb8c85692a329c9c4bccb779acaa34c1"
+    }
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "threshold": 0.3,
+  "trench": {
+    "a": [
+      "Building 1",
+      "Outside"
+    ],
+    "b": [
+      "Building 5",
+      "Outside"
+    ]
+  },
+  "methods": {
+    "text": {
+      "same_period": false,
+      "same_type": false,
+      "structure_weight": 0.0,
+      "check_cycles": false
+    },
+    "+ period/type": {
+      "same_period": true,
+      "same_type": true,
+      "structure_weight": 0.0,
+      "check_cycles": false
+    },
+    "+ cycle check": {
+      "same_period": true,
+      "same_type": true,
+      "structure_weight": 0.0,
+      "check_cycles": true
+    },
+    "+ structure": {
+      "same_period": true,
+      "same_type": true,
+      "structure_weight": 0.5,
+      "check_cycles": true
+    }
+  },
+  "scenarios": [
+    {
+      "overlap": "trench",
+      "noise": 0.0,
+      "dropout": 0.1,
+      "split": 0.05,
+      "lump": 0.05
+    },
+    {
+      "overlap": "trench",
+      "noise": 0.2,
+      "dropout": 0.1,
+      "split": 0.05,
+      "lump": 0.05
+    },
+    {
+      "overlap": "trench",
+      "noise": 0.4,
+      "dropout": 0.1,
+      "split": 0.05,
+      "lump": 0.05
+    },
+    {
+      "overlap": "trench",
+      "noise": 0.4,
+      "dropout": 0.3,
+      "split": 0.05,
+      "lump": 0.05
+    },
+    {
+      "overlap": "full",
+      "noise": 0.0,
+      "dropout": 0.1,
+      "split": 0.05,
+      "lump": 0.05
+    },
+    {
+      "overlap": "full",
+      "noise": 0.2,
+      "dropout": 0.1,
+      "split": 0.05,
+      "lump": 0.05
+    },
+    {
+      "overlap": "full",
+      "noise": 0.4,
+      "dropout": 0.1,
+      "split": 0.05,
+      "lump": 0.05
+    },
+    {
+      "overlap": "full",
+      "noise": 0.4,
+      "dropout": 0.3,
+      "split": 0.05,
+      "lump": 0.05
+    }
+  ],
+  "harris_mcp": {
+    "version": "0.1.0",
+    "commit": "41ea841"
+  },
+  "python": "3.11.15",
+  "packages": {
+    "networkx": "3.6.1",
+    "fastmcp": "3.4.7",
+    "pydantic": "2.13.5"
+  },
+  "runtime_seconds": 533.0,
+  "finished": "2026-09-28T08:53:48Z"
+}

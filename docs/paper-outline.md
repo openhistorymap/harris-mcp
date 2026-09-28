@@ -206,7 +206,21 @@ LLM would make, (c) the output, (d) the human-auditable changelog.
   Design, parameters and caveats: `sim/README.md`. Table:
   `sim/results/summary.tex`; figure: `sim/results/fig-reconcile-f1.pdf`;
   raw per-seed data: `sim/results/runs.csv`; provenance:
-  `sim/results/meta.json`. Headline findings: RESULTS_PLACEHOLDER
+  `sim/results/meta.json`. Headline findings: (1) description similarity alone is
+  unusable across trenches (F1 0.32 with perfect descriptions: every unit
+  outside the overlap finds a look-alike) and its matches contradict the
+  sequence (≈ 530 units in cycles); restricting candidates to the same
+  period and type fixes the trench case (0.95). (2) The cycle check
+  removes every contradiction at a small F1 gain. (3) Structural agreement
+  is what survives noise: at 20 % description noise F1 0.83 vs 0.67
+  (trench) and 0.68 vs 0.40 (full re-recording); it is best in every
+  scenario (mean over 10 seeds).
+  (4) At 40 % noise over a whole site F1 stays low (0.25): the
+  deterministic layer narrows the search, it does not replace the
+  interpretive triage the LLM/human does in §5.2. Relation dropout from
+  10 % to 30 % costs structure some recall in the small trench overlap
+  (0.52 → 0.42) and little on the whole site (0.25 → 0.22). Results are
+  deterministic across hash seeds; `meta.json` records the commit.
 
 ## 6. Discussion
 

@@ -135,6 +135,13 @@ provenance
   (`same_as`, `contemporary_with`) stored outside the source matrices so
   that round-tripping to HMC/CSV does not erode them. Discuss the
   trade-off versus inlining correspondences into each matrix's `attrs`.
+  Reconciliation support is deterministic and advisory:
+  `propose_reconciliation` suggests a consistent 1:1 matching (description
+  similarity + stratigraphic agreement + a refusal of matches that would
+  create a cycle), nothing is written until the LLM or the human asserts;
+  `check_correspondences` re-checks the whole asserted set, and
+  `assert_correspondence` reports — but does not refuse — a contradiction
+  it introduces. Evaluated in §5.4.
 - **3.6 Provenance and changelog model.** Schema for changelog entries;
   what counts as one entry; how revert composes; the deliberate decision
   *not* to use Git-style branching (would conflate code-version semantics
@@ -151,11 +158,15 @@ provenance
 - **4.2 Module layout.** Mirror the directory tree from the repo; one
   paragraph per module on responsibility.
 - **4.3 Format adapters in detail.** HMDP (canonical), CSV (two
-  conventions), XLSX (openpyxl). Discuss the HMC/HMCX situation honestly:
-  proprietary, undocumented, stubbed with a clean fallback path through
-  HMDP/CSV/XLSX export. Frame this as a *political* problem (closed
-  standard in a discipline that values openness), not just a technical
-  one.
+  conventions), XLSX (openpyxl), T. S. Dye's hm tables (Frictionless data
+  package or hm `.ini` project). HMC/HMCX: proprietary and undocumented,
+  but HMC 2.x writes GraphML inside the `.hmcx` zip and exports a
+  semicolon CSV; both are now read (verified against Rosenstock's
+  Ulm-Eggingen files, where the two encodings load to the same matrix —
+  except one phase group that the two published files place in different
+  periods). No write support. Frame the situation as a *political* problem
+  (closed standard in a discipline that values openness), not just a
+  technical one.
 - **4.4 Validation.** Cycle detection, dangling-reference detection,
   redundant-edge detection via transitive reduction. Note that validation
   runs eagerly at load time so the LLM never operates on a structurally
@@ -178,12 +189,24 @@ LLM would make, (c) the output, (d) the human-auditable changelog.
   LLM to propose a phasing from descriptions alone; commit the
   assignments with notes; show the diff.
 - **5.2 Multi-trench correspondence.** Load two trench matrices from the
-  same site; run `cross_reference` by description; have the LLM triage
-  candidate matches; record `same_as` correspondences; render a merged
-  diagram.
+  same site; run `propose_reconciliation`; have the LLM triage the proposal
+  (text score and structural agreement per pair, plus the pairs rejected
+  for contradicting the sequence); record `same_as` correspondences;
+  confirm with `check_correspondences`; render a merged diagram.
 - **5.3 Hand-off to GIS.** Export contexts with geometry as GeoJSON for
   `ohm_importer`; round-trip through the OHM stack; comment on what the
   Harris layer adds to a purely spatial representation.
+
+- **5.4 Simulated evaluation: unit reconciliation.** Not an LLM benchmark
+  (see notes below) — a test of the substrate's deterministic support.
+  Ground truth: Çatalhöyük Bldg 1–5 (705 units, 852 relations). Two
+  simulated teams record overlapping parts with their own numbering, noisy
+  descriptions, missed relations, split and lumped units; a cumulative
+  ablation of `propose_reconciliation` is scored against the truth.
+  Design, parameters and caveats: `sim/README.md`. Table:
+  `sim/results/summary.tex`; figure: `sim/results/fig-reconcile-f1.pdf`;
+  raw per-seed data: `sim/results/runs.csv`; provenance:
+  `sim/results/meta.json`. Headline findings: RESULTS_PLACEHOLDER
 
 ## 6. Discussion
 
@@ -210,8 +233,10 @@ LLM would make, (c) the output, (d) the human-auditable changelog.
 
 ## 7. Limitations
 
-- HMC/HMCX read/write not yet implemented (best-effort stub; round-trip
-  via export currently required).
+- HMC/HMCX are read-only (GraphML payload and CSV export); other HMC
+  variants fall back to a best-effort reader.
+- The reconciliation evaluation (§5.4) uses synthetic descriptions, one
+  site, and team vocabularies that share period and type names.
 - No automatic phase inference; the LLM proposes, the human (or the LLM
   under instruction) commits.
 - Validation does not check archaeological plausibility (e.g., a cut
@@ -228,7 +253,9 @@ LLM would make, (c) the output, (d) the human-auditable changelog.
 - Persistent storage in Mongo with a per-matrix versioned history.
 - Evaluation methodology: how would one *measure* the quality of LLM
   interpretive assertions on a Harris matrix? Inter-rater agreement
-  against expert archaeologists is the obvious baseline.
+  against expert archaeologists is the obvious baseline. §5.4 gives a
+  ground-truth harness for the deterministic layer; the same harness can
+  score an LLM (or a human) triaging `propose_reconciliation` output.
 
 ## 9. Conclusion
 
@@ -272,4 +299,5 @@ Verbatim JSON payloads from §5, for reproducibility.
   correspondences" — that is a different paper, and it dates badly.
   The contribution here is the *substrate*.
 - One figure per section, max. Architecture diagram (§3.1), changelog
-  example (§3.6), worked-example diff (§5.2), comparison table (§6.3).
+  example (§3.6), worked-example diff (§5.2), reconciliation F1
+  (§5.4, `sim/results/fig-reconcile-f1.pdf`), comparison table (§6.3).

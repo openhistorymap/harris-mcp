@@ -18,7 +18,7 @@ import networkx as nx
 from fastmcp import FastMCP
 from pydantic import BaseModel
 
-from . import formats, registry
+from . import formats, reconcile, registry
 from .model import Context, Correspondence, Matrix, Relation
 from .render import render as render_matrix
 from .validate import validate as validate_matrix
@@ -647,51 +647,85 @@ def query_corpus(
     return out
 
 
-def _similarity(a: str, b: str) -> float:
-    """Cheap normalised token Jaccard. Good enough for triage."""
-    sa = {t for t in a.lower().split() if t}
-    sb = {t for t in b.lower().split() if t}
-    if not sa or not sb:
-        return 0.0
-    return len(sa & sb) / len(sa | sb)
-
-
 @mcp.tool
 def cross_reference(
     matrix_a: str,
     matrix_b: str,
     by: Literal["id", "description", "attrs"] = "description",
     threshold: float = 0.4,
+    same_period: bool = False,
+    same_type: bool = False,
     limit: int = 100,
 ) -> list[dict]:
-    """Suggest candidate matches between two matrices. For LLM triage —
-    nothing is asserted; nothing is written. Use `assert_correspondence`
-    to record a conclusion."""
+    """Suggest candidate matches between two matrices, best first. For LLM
+    triage — nothing is asserted; nothing is written. `same_period` /
+    `same_type` only compare units with equal period / type. Use
+    `propose_reconciliation` for a consistent 1:1 matching and
+    `assert_correspondence` to record a conclusion."""
     a, b = registry.get(matrix_a), registry.get(matrix_b)
+    scores = reconcile.candidates(a, b, by=by, threshold=threshold,
+                                  same_period=same_period, same_type=same_type)
+    reason = {"id": "identical id", "description": "description token overlap",
+              "attrs": "attribute token overlap"}[by]
+    best = sorted(scores.items(), key=lambda kv: (-kv[1], kv[0]))[:limit]
+    return [{"ctx_a": x, "ctx_b": y, "score": round(sc, 3), "reason": reason} for (x, y), sc in best]
+
+
+@mcp.tool
+def propose_reconciliation(
+    matrix_a: str,
+    matrix_b: str,
+    by: Literal["id", "description", "attrs"] = "description",
+    threshold: float = 0.3,
+    same_period: bool = True,
+    same_type: bool = True,
+    structure_weight: float = 0.5,
+    rounds: int = 3,
+    check_cycles: bool = True,
+) -> dict:
+    """Propose which units of `matrix_a` and `matrix_b` are the same unit.
+
+    A 1:1 matching built from `cross_reference` scores plus structural
+    agreement (matched neighbours above/below on the same side), refined
+    over `rounds`; pairs that would put a unit both above and below another
+    are rejected and listed. Nothing is written — review, then record the
+    accepted pairs with `assert_correspondence`. Set `structure_weight` 0
+    and `check_cycles` false for plain text matching.
+    """
+    a, b = registry.get(matrix_a), registry.get(matrix_b)
+    text = reconcile.candidates(a, b, by=by, threshold=threshold,
+                                same_period=same_period, same_type=same_type)
+    result = reconcile.propose(a, b, text, structure_weight=structure_weight,
+                               rounds=rounds, check_cycles=check_cycles)
+    return {"matrix_a": matrix_a, "matrix_b": matrix_b, "n_candidates": len(text), **result}
+
+
+def _contradictions(matrix_ids: Optional[list[str]] = None) -> list[dict]:
+    ids = matrix_ids or [m.id for m in registry.all_matrices()]
+    matrices = [registry.get(i) for i in ids]
+    wanted = set(ids)
+    same = [c for c in registry.correspondences()
+            if c.kind == "same_as" and c.matrix_a in wanted and c.matrix_b in wanted]
+    groups = reconcile.contradictions(
+        matrices, [((c.matrix_a, c.ctx_a), (c.matrix_b, c.ctx_b)) for c in same])
     out = []
-    for ca in a.contexts.values():
-        for cb in b.contexts.values():
-            score = 0.0
-            reason = ""
-            if by == "id":
-                score = 1.0 if ca.id == cb.id else 0.0
-                reason = "identical id"
-            elif by == "description":
-                score = _similarity(ca.description or "", cb.description or "")
-                reason = "description token overlap"
-            elif by == "attrs":
-                a_str = " ".join(str(v) for v in ca.attrs.values())
-                b_str = " ".join(str(v) for v in cb.attrs.values())
-                score = _similarity(a_str, b_str)
-                reason = "attribute token overlap"
-            if score >= threshold:
-                out.append({
-                    "ctx_a": ca.id, "ctx_b": cb.id,
-                    "score": round(score, 3), "reason": reason,
-                })
-            if len(out) >= limit:
-                return sorted(out, key=lambda x: -x["score"])
-    return sorted(out, key=lambda x: -x["score"])
+    for group in groups:
+        involved = [c.id for c in same if (c.matrix_a, c.ctx_a) in group or (c.matrix_b, c.ctx_b) in group]
+        out.append({
+            "units": [{"matrix_id": m, "ctx": x} for m, x in sorted(group)],
+            "correspondences": involved,
+        })
+    return out
+
+
+@mcp.tool
+def check_correspondences(matrix_ids: Optional[list[str]] = None) -> dict:
+    """Merge matrices through their `same_as` correspondences and report
+    stratigraphic contradictions: groups of units that end up both above
+    and below one another, with the correspondences involved. Defaults to
+    every open matrix."""
+    found = _contradictions(matrix_ids)
+    return {"consistent": not found, "contradictions": found}
 
 
 @mcp.tool
@@ -712,7 +746,12 @@ def assert_correspondence(
         kind=kind, note=note, author=author,
     )
     registry.add_correspondence(c)
-    return c.model_dump()
+    out = c.model_dump()
+    if kind == "same_as":
+        # Reported, not refused: the assertion is the caller's to make.
+        out["contradictions"] = [g for g in _contradictions([matrix_a, matrix_b])
+                                 if c.id in g["correspondences"]]
+    return out
 
 
 @mcp.tool

@@ -26,3 +26,4 @@ pyvenv.cfg
 *.png
 !docs/*.svg
 !docs/*.png
+sim/data/

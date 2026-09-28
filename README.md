@@ -50,10 +50,14 @@ rationale at length.
   with `note` and `author`. `history`, `diff`, and `revert` are tools, not
   hidden machinery — the LLM's interpretive trail is a first-class
   artifact.
-- **Cross-document corpus tools.** Load many matrices at once;
-  `cross_reference` suggests candidate matches across trenches;
-  `assert_correspondence` records the LLM's conclusions outside the
-  source matrices, so round-trips to HMC/CSV don't erode them.
+- **Cross-document reconciliation.** Load many matrices at once;
+  `propose_reconciliation` suggests which units across trenches are the
+  same, combining description similarity with stratigraphic agreement and
+  refusing matches that would contradict the sequence;
+  `assert_correspondence` records the LLM's conclusions outside the source
+  matrices (so round-trips to HMC/CSV don't erode them) and
+  `check_correspondences` flags any that do contradict it. A
+  [simulation](sim/README.md) measures the approach against a ground truth.
 - **Open History Map integration.** Optional hooks for
   `export_geojson` and `link_ohm_feature` so stratigraphic data hands off
   cleanly to the rest of the [OHM ecosystem][ohm].
@@ -100,7 +104,7 @@ built with FastMCP) can connect to the SSE endpoint above. See
 | Whole-matrix | `topological_layers`, `phases`, `phase_sequence`, `periods`, `phase_contexts`, `validate`, `summary`, `anomalies`, `describe_context`, `describe_phase`, `boundary_contexts` |
 | Edit (changelogged) | `add_context`, `update_context`, `delete_context`, `add_relation`, `remove_relation`, `assign_phase`, `mark_contemporary`, `attach_note` |
 | Provenance | `history`, `revert`, `diff` |
-| Cross-document | `query_corpus`, `cross_reference`, `assert_correspondence`, `correspondences`, `compare_phases`, `compare_periods` |
+| Cross-document | `query_corpus`, `cross_reference`, `propose_reconciliation`, `assert_correspondence`, `check_correspondences`, `correspondences`, `compare_phases`, `compare_periods` |
 | Output | `render`, `subgraph`, `export_geojson`, `link_ohm_feature` |
 
 Resources mirror the most useful reads as URIs:
@@ -139,9 +143,15 @@ harris_mcp/
   registry.py             In-memory open-matrix registry + cross-doc table
   server.py               FastMCP tools + resources (the public surface)
   validate.py             Cycle / dangling / redundant-edge diagnostics
+  reconcile.py            Cross-document unit matching + contradiction checks
   render.py               Graphviz DOT/SVG/PNG renderer
   formats/
-    hmdp.py  csv.py  xlsx.py  hmc.py  hmcx.py
+    hmdp.py  csv.py  xlsx.py  datapackage.py  hmc.py  hmcx.py  hmc_units.py
+sim/
+  reconcile_sim.py        Unit-reconciliation simulation (see sim/README.md)
+  plot.py                 Paper figure from sim/results/summary.csv
+  results/                Committed results: CSV, LaTeX/Markdown tables, figure
+tests/                    pytest suite + fixtures
 docs/
   paper-outline.md        Companion paper outline (design rationale)
 Dockerfile                Python 3.11 + graphviz

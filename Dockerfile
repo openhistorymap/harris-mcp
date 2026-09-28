@@ -17,6 +17,7 @@ FROM base AS test
 COPY requirements-dev.txt .
 RUN pip install --no-cache-dir -r requirements-dev.txt
 COPY tests ./tests
+COPY sim ./sim
 CMD ["python", "-m", "pytest", "-q", "tests"]
 
 FROM base AS runtime

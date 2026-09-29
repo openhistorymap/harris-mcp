@@ -108,7 +108,7 @@ docker run --rm -p 8000:8000 -v "$PWD/data:/data:ro" harris-mcp
 # MCP endpoint: http://localhost:8000/mcp/sse   health: GET /</code></pre>
       <h3>A first session</h3>
       <ol class="hm-steps">
-        <li><div><b>Open a matrix</b><p><code>open_matrix("/data/fig12")</code> returns a handle, its size, depth and a validation report.</p></div></li>
+        <li><div><b>Open or upload a matrix</b><p><code>open_matrix("/data/fig12")</code> opens a file on the server; <code>upload_matrix(files={"site.hmcx": …}, encoding="base64")</code> sends your own. Either returns a handle, its size, depth and a validation report; an upload also returns the inferred phase order and any anomalies.</p></div></li>
         <li><div><b>Read it densely</b><p><code>describe_context(id, "15")</code> returns the unit, its neighbours above and below, its phase and any links to other records.</p></div></li>
         <li><div><b>Edit with a reason</b><p><code>assign_phase(id, "9", "Phase II", note="C14 LAB-1 fits the lower phase")</code> lands on <code>history</code>.</p></div></li>
         <li><div><b>Save</b><p><code>save_matrix(id, "fig12.hmdp.json")</code> keeps the changelog with the matrix.</p></div></li>
@@ -152,8 +152,9 @@ docker run --rm -p 8000:8000 -v "$PWD/data:/data:ro" harris-mcp
     <div class="sheet__wide">
 <!-- tools:start -->
 <div class="hm-toolref">
-<section><h3>Load and save <span>5</span></h3><dl>
-<div><dt>open_matrix</dt><dd>Load a Harris matrix file and return its handle.</dd></div>
+<section><h3>Load and save <span>6</span></h3><dl>
+<div><dt>open_matrix</dt><dd>Load a Harris matrix file on the server and return its handle.</dd></div>
+<div><dt>upload_matrix</dt><dd>Upload a matrix by content, open it, and return a first analysis.</dd></div>
 <div><dt>open_corpus</dt><dd>Load several matrix files at once.</dd></div>
 <div><dt>close_matrix</dt><dd>Close an open matrix and free it from the registry.</dd></div>
 <div><dt>list_open_matrices</dt><dd>Summaries of every open matrix: id, name, size, depth.</dd></div>

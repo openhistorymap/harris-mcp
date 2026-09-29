@@ -18,7 +18,7 @@ import networkx as nx
 from fastmcp import FastMCP
 from pydantic import BaseModel
 
-from . import formats, reconcile, registry
+from . import formats, reconcile, registry, uploads
 from .model import Context, Correspondence, Matrix, Relation
 from .render import render as render_matrix
 from .validate import validate as validate_matrix
@@ -61,14 +61,51 @@ def _matrix_summary(m: Matrix) -> dict:
 
 @mcp.tool
 def open_matrix(path: str, fmt: str = "auto") -> dict:
-    """Load a Harris matrix file and return its handle.
+    """Load a Harris matrix file on the server and return its handle.
 
-    `fmt` may be "auto" (detect from extension) or one of:
-    hmdp, json, csv, xlsx, hmc, hmcx.
+    `fmt` may be "auto" (detect from the path) or one of: hmdp, json, csv,
+    xlsx, datapackage, zip, hmc, hmcx. To analyse a file the server cannot
+    see, send its contents with `upload_matrix`.
     """
     m = formats.load(path, fmt=fmt)
     registry.register(m)
     return {"matrix_id": m.id, **_matrix_summary(m), "diagnostics": validate_matrix(m)}
+
+
+@mcp.tool
+def upload_matrix(
+    files: dict[str, str],
+    encoding: Literal["text", "base64"] = "text",
+    fmt: str = "auto",
+    name: Optional[str] = None,
+) -> dict:
+    """Upload a matrix by content, open it, and return a first analysis.
+
+    `files` maps plain file names to their contents; the names' extensions
+    pick the format, as in `open_matrix`. One file is loaded on its own
+    (`site.hmdp.json`, `edges.csv`, `site.hmcx`, `site.xlsx`, `package.zip`);
+    several are loaded together as a folder (`contexts.csv` + `relations.csv`,
+    hm tables with their `.ini`, a `datapackage.json` with its CSVs). Send
+    text files with `encoding="text"`; XLSX, HMCX and zip need
+    `encoding="base64"`. Limits: 10 MB and 20 files per upload.
+
+    Returns the handle and summary, validation diagnostics, the phase order
+    implied by the stratigraphy, and any phase anomalies; every other tool
+    then works on the returned `matrix_id`.
+    """
+    m = uploads.load(files, encoding=encoding, fmt=fmt, name=name)
+    registry.register(m)
+    diag = validate_matrix(m)
+    found = anomalies(matrix_id=m.id)
+    return {
+        "matrix_id": m.id,
+        **_matrix_summary(m),
+        "files": sorted(files),
+        "diagnostics": {**diag, "cycles": diag["cycles"][:20], "redundant_edges": diag["redundant_edges"][:20],
+                        "orphans": diag["orphans"][:50]},
+        "phase_sequence": phase_sequence(matrix_id=m.id),
+        "anomalies": {"count": len(found), "first": found[:20]},
+    }
 
 
 @mcp.tool

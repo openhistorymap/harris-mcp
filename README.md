@@ -78,7 +78,7 @@ pip install -r requirements.txt
 uvicorn app:app --reload --port 8000
 ```
 
-- MCP endpoint: `http://localhost:8000/mcp` (SSE transport)
+- MCP endpoint: `http://localhost:8000/mcp/sse` (SSE transport)
 - Health: `GET http://localhost:8000/` → JSON status
 
 ### With Docker
@@ -94,11 +94,30 @@ Any MCP-compatible client (Claude Desktop, Claude Code, custom agents
 built with FastMCP) can connect to the SSE endpoint above. See
 `docs/paper-outline.md` §5 for worked example sessions.
 
+### Analyse your own matrix
+
+A client cannot put files on the server, so `upload_matrix` takes their
+contents: `files` maps plain file names to contents (text, or base64 for
+XLSX, HMCX and zip), and the extensions pick the format. One file is
+loaded on its own; several are loaded together as a folder (paired CSV
+tables, hm tables with their `.ini`, a `datapackage.json` with its CSVs).
+The reply carries the handle, validation diagnostics, the phase order
+implied by the stratigraphy and any phase anomalies.
+
+Uploads are bounded, since the server may be public:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `HARRIS_UPLOAD_DIR` | `$TMPDIR/harris-uploads` | where uploads are written |
+| `HARRIS_UPLOAD_MAX_BYTES` | 10 MB | per upload, after decoding |
+| `HARRIS_UPLOAD_MAX_FILES` | 20 | per upload |
+| `HARRIS_UPLOAD_KEEP` | 100 | uploads kept on disk; older ones are removed |
+
 ## Tool surface at a glance
 
 | Group | Tools |
 |---|---|
-| Load / save | `open_matrix`, `open_corpus`, `close_matrix`, `list_open_matrices`, `save_matrix` |
+| Load / save | `open_matrix`, `upload_matrix`, `open_corpus`, `close_matrix`, `list_open_matrices`, `save_matrix` |
 | Read units | `get_context`, `list_contexts`, `count_contexts`, `search_contexts` |
 | Read relations | `neighbors`, `ancestors`, `descendants`, `relation`, `path`, `between`, `contemporaries` |
 | Whole-matrix | `topological_layers`, `phases`, `phase_sequence`, `periods`, `phase_contexts`, `validate`, `summary`, `anomalies`, `describe_context`, `describe_phase`, `boundary_contexts` |

@@ -28,7 +28,7 @@ PAGE = ROOT / "docs" / "index.html"
 RESULTS = ROOT / "sim" / "results"
 
 GROUPS = {
-    "Load and save": ["open_matrix", "open_corpus", "close_matrix", "list_open_matrices", "save_matrix"],
+    "Load and save": ["open_matrix", "upload_matrix", "open_corpus", "close_matrix", "list_open_matrices", "save_matrix"],
     "Read units": ["get_context", "list_contexts", "count_contexts", "search_contexts"],
     "Read relations": ["neighbors", "ancestors", "descendants", "relation", "path", "between", "contemporaries"],
     "Whole matrix": ["topological_layers", "phases", "phase_sequence", "periods", "phase_contexts", "validate",

@@ -1,0 +1,22 @@
+[project]
+name = "harris-mcp"
+version = "0.1.0"
+description = "A Model Context Protocol server that makes Harris matrices first-class citizens of an LLM's working context."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.11"
+dependencies = [
+    "fastmcp>=3,<4",
+    "starlette>=0.36",
+    "uvicorn[standard]>=0.27",
+    "networkx>=3.0",
+    "pydantic>=2.6",
+    "openpyxl>=3.1",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["harris_mcp"]
